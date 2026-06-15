@@ -23,12 +23,15 @@ def detect(cand: Candidate) -> tuple[bool, list[str]]:
             f"role durations sum to {total}mo but only {yoe:.1f}yrs experience claimed"
         )
 
-    # 2. A single skill used longer than the entire career.
+    # 2. A single skill used IMPOSSIBLY longer than the entire career. Legit profiles show a
+    #    smooth noise tail of modest overage (hobby / pre-career use), so we require the overage
+    #    to be BOTH large in absolute months AND a multiple of the whole career before flagging.
     for sk in cand.skills:
         dur = int(sk.get("duration_months") or 0)
-        if dur > yoe_months + C.SKILL_DUR_SLACK_MONTHS:
+        if (dur > yoe_months + C.SKILL_DUR_SLACK_MONTHS
+                and dur > yoe_months * C.SKILL_DUR_RATIO):
             reasons.append(
-                f"skill '{sk.get('name')}' used {dur}mo > career length {yoe_months:.0f}mo"
+                f"skill '{sk.get('name')}' used {dur}mo > {C.SKILL_DUR_RATIO:g}x career length {yoe_months:.0f}mo"
             )
             break
 
@@ -58,10 +61,12 @@ def detect(cand: Candidate) -> tuple[bool, list[str]]:
     ]
     job_years = [int(y) for y in job_starts if y.isdigit()]
     if edu_starts and job_years:
-        # working before starting undergrad by more than a couple years is implausible
-        if min(job_years) < min(edu_starts) - 1:
+        # Working before a later degree is a normal life pattern; only an absurd gap (effectively
+        # working as a child) is impossible. Guard with a generous slack to avoid false positives.
+        if min(job_years) < min(edu_starts) - C.JOB_BEFORE_EDU_SLACK_YEARS:
             reasons.append(
-                f"earliest job {min(job_years)} precedes earliest education {min(edu_starts)}"
+                f"earliest job {min(job_years)} precedes earliest education {min(edu_starts)} "
+                f"by >{C.JOB_BEFORE_EDU_SLACK_YEARS}yr"
             )
 
     # 6. Education end before start.

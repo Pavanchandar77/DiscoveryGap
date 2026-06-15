@@ -180,7 +180,19 @@ NOTICE_PREFERRED_DAYS = 30
 # ---------------------------------------------------------------------------
 # Honeypot thresholds (honeypot.py) — pure logic
 # ---------------------------------------------------------------------------
+# This is a HARD-KILL gate (floors score, excludes from top-100), so it must be
+# precision-first: a false positive silently kills a legitimate strong candidate.
+# Thresholds calibrated against the real pool distributions (see scripts/honeypot_audit.py):
+#   - sum(history_months) > yoe*12 is naturally ~0 for legit profiles (99th pctile = 0mo),
+#     so a small overlap slack stays clean while catching genuine inconsistencies.
+#   - skill duration_months vs career length is a SMOOTH NOISE TAIL for legit profiles
+#     (modest overage from hobby/pre-career use is normal); only an overage that is BOTH
+#     large in absolute months AND a multiple of the whole career is actually impossible.
+#   - "job precedes education" is a normal life pattern (work, then a later degree) up to
+#     several years; only an absurd gap (working as a child) is impossible.
 TENURE_SLACK_MONTHS = 18         # sum(durations) may exceed yoe*12 by at most this (overlap slack)
-SKILL_DUR_SLACK_MONTHS = 12      # a skill's duration_months may exceed career length by at most this
+SKILL_DUR_SLACK_MONTHS = 24      # a skill's duration may exceed career length by at most this (absolute)
+SKILL_DUR_RATIO = 2.0            # ...AND only impossible if skill duration also exceeds career * this
 EXPERT_ZERO_DUR_MAX = 2          # >2 "expert" skills with ~0 months used => suspicious
+JOB_BEFORE_EDU_SLACK_YEARS = 12  # earliest job may precede earliest education by up to this (late-degree)
 MIN_WORK_AGE = 18
