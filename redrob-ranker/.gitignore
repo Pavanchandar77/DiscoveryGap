@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+artifacts/*.npy
+artifacts/*.parquet
+artifacts/*.json
+eval/*.parquet
+eval/discovery_gap.md
+data/*.jsonl
+data/*.gz
+submission.csv
+.DS_Store
