@@ -1,0 +1,5 @@
+numpy>=1.26
+pandas>=2.1
+pyarrow>=14.0
+sentence-transformers>=2.6   # OFFLINE precompute only; not imported by rank.py
+# rank.py itself needs only numpy + pandas + pyarrow (CPU, no network)
