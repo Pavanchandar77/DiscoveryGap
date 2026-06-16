@@ -64,27 +64,34 @@ def main():
     base_hp = sum(i in hp for i in base100); base_stf = sum(i in stf for i in base100)
     our_hp = sum(i in hp for i in ours[:100]); our_stf = sum(i in stf for i in ours[:100])
 
-    # Hidden gems: in our top-20 but ATS-ranked far lower; explain each.
+    # Hidden gems: in our top-20 but ATS-ranked far lower; lead with the biggest mispricing.
     gems = [cid for cid in ours[:20] if base_rank.get(cid, 10**9) > 100]
+    gems.sort(key=lambda cid: -(base_rank.get(cid, 10**9) - our_rank[cid]))   # highest TMI first
     cards = []
     for cid in gems[:8]:
         s = score_candidate(Candidate(raws[cid]), 0.5)
         why = _why_missed(Candidate(raws[cid]), s)
-        cards.append((cid, our_rank[cid], base_rank.get(cid), Candidate(raws[cid]).title, why))
+        tmi = base_rank.get(cid) - our_rank[cid]
+        cards.append((cid, our_rank[cid], base_rank.get(cid), tmi, Candidate(raws[cid]).title, why))
 
-    lines = [f"""# Discovery Gap 2.0: what traditional hiring misses
+    lines = [f"""# Talent Mispricing: what traditional hiring systematically gets wrong
 
-| metric | naive ATS baseline | our gated ranker |
+We don't just rank candidates — we measure how badly a keyword/similarity ATS **misprices**
+them. The Talent Mispricing Index (TMI) = how many ranking positions the ATS undervalues a
+candidate by (`ats_rank − our_rank`).
+
+| metric | naive ATS baseline | our engine |
 |---|---|---|
 | honeypots in top-100 | {base_hp} | {our_hp} |
 | keyword-stuffers in top-100 | {base_stf} | {our_stf} |
 
 The baseline is pure JD-similarity — what most ATS/keyword rankers do. It walks into the
-engineered traps and, worse, **buries real talent that doesn't use the buzzwords**. Below: gems
-our ranker surfaced into the top-20 that the ATS buried past rank 100, and *why*.
+engineered traps and, worse, **buries real talent that doesn't use the buzzwords**. The most
+mispriced talent in our top-20, biggest first:
 """]
-    for cid, orank, brank, title, why in cards:
-        lines.append(f"### {title} — our rank **{orank}**, ATS rank **{brank}**")
+    for cid, orank, brank, tmi, title, why in cards:
+        lines.append(f"### {title} — our rank **{orank}**, ATS rank **{brank}**  ·  **TMI +{tmi}**")
+        lines.append(f"_Undervalued by {tmi} ranking positions._\n")
         lines.append("\n".join(f"- {w}" for w in why) + "\n")
     if not cards:
         lines.append("_(No top-20 gem was buried past ATS rank 100 in this run.)_")

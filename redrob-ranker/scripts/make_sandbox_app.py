@@ -28,7 +28,7 @@ st.set_page_config(page_title="Talent Conviction Engine", layout="wide")
 st.title("🎯 Talent Conviction Engine")
 st.markdown("**Identify overlooked candidates, quantify confidence in every recommendation, "
             "and explain exactly why traditional hiring systems missed them.**")
-st.caption("Fit = how relevant · Conviction = how certain · Discovery Gap = how much a "
+st.caption("Fit = how relevant · Conviction = how certain · Talent Mispricing Index (TMI) = how much a "
            "keyword/similarity ATS underrates them.")
 
 
@@ -95,23 +95,25 @@ if gems:
     st.subheader("💎 Hidden Gems — high conviction, buried by keyword search")
     for g in gems[:3]:
         st.markdown(f"**#{g['our_rank']} {g['title']}** — Fit **{g['fit']}**, Conviction "
-                    f"**{g['conviction']}%**, Discovery Gap **{g['discovery_gap']:+d}** "
-                    f"(ATS rank {g['ats_rank']})")
+                    f"**{g['conviction']}%**, **TMI {g['tmi']:+d}** (undervalued by {g['tmi']} "
+                    f"positions vs ATS rank {g['ats_rank']}) · Evidence Density "
+                    f"{g['evidence_density']}% ({g['verified_skills']}/{g['claimed_skills']})")
         st.markdown("  ".join(f"✓ {d}" for d in g["trust_drivers"]))
         if g["concerns"]:
             st.caption("  ".join(f"⚠ {x}" for x in g["concerns"]))
 
 # --- Quadrant chart ---
-st.subheader("The bet map — Fit × Conviction")
+st.subheader("The bet map — Fit × Conviction (bubble = how badly the ATS mispriced them)")
 df = pd.DataFrame(cards)
+df["tmi_size"] = df["tmi"].clip(lower=0)        # bubble size = undervaluation (non-negative)
 try:
     import altair as alt
     pts = alt.Chart(df).mark_circle(opacity=0.75).encode(
         x=alt.X("fit:Q", title="Fit (relevance)"),
         y=alt.Y("conviction:Q", title="Conviction (certainty)"),
         color=alt.Color("quadrant:N", legend=alt.Legend(title="Quadrant")),
-        size=alt.Size("discovery_gap:Q", title="Discovery Gap"),
-        tooltip=["our_rank", "title", "fit", "conviction", "discovery_gap", "quadrant"],
+        size=alt.Size("tmi_size:Q", title="Talent Mispricing Index"),
+        tooltip=["our_rank", "title", "fit", "conviction", "tmi", "evidence_density", "quadrant"],
     )
     rules = (alt.Chart(pd.DataFrame({"y": [60]})).mark_rule(strokeDash=[4, 4]).encode(y="y:Q"))
     st.altair_chart((pts + rules).interactive(), use_container_width=True)
@@ -121,13 +123,14 @@ except Exception:
 # --- Full table + per-candidate explanation ---
 st.subheader("Ranked candidates")
 st.dataframe(
-    df[["our_rank", "candidate_id", "title", "fit", "conviction", "discovery_gap", "quadrant"]],
+    df[["our_rank", "candidate_id", "title", "fit", "conviction", "tmi",
+        "evidence_density", "quadrant"]].rename(columns={"tmi": "TMI", "evidence_density": "evidence%"}),
     use_container_width=True, hide_index=True,
 )
 with st.expander("Why we trust each candidate (Trust Drivers & Concerns)"):
     for c in cards[:25]:
         st.markdown(f"**#{c['our_rank']} {c['title']}** · Fit {c['fit']} · "
-                    f"Conviction {c['conviction']}% · Gap {c['discovery_gap']:+d}")
+                    f"Conviction {c['conviction']}% · TMI {c['tmi']:+d}")
         st.markdown("  ".join(f"✓ {d}" for d in c["trust_drivers"]) or "_—_")
         if c["concerns"]:
             st.caption("  ".join(f"⚠ {x}" for x in c["concerns"]))

@@ -34,16 +34,19 @@ def main():
 
     print("=" * 64)
     print("  TALENT CONVICTION ENGINE")
-    print("  Fit = relevance · Conviction = certainty · Discovery Gap = ATS underrating")
+    print("  Fit = relevance · Conviction = certainty · TMI = positions the ATS underprices them")
     print("=" * 64)
     for i, cid in enumerate(ours[:a.n], 1):
         c = Candidate(raws[cid])
         s = score_candidate(c, sem.get(cid, 0.0)); s["rscore"] = round(s["score"], 4)
         card = presentation.card(c, s, i, ats_rank.get(cid))
-        gap = card["discovery_gap"]
+        tmi = card["tmi"]
         print(f"\n#{card['our_rank']}  {card['title']}   [{card['quadrant']}]")
         print(f"   Fit {card['fit']}   |   Conviction {card['conviction']}%   |   "
-              f"Discovery Gap {gap:+d}  (ATS rank {card['ats_rank']})")
+              f"Talent Mispricing Index {tmi:+d}  (ATS rank {card['ats_rank']}, "
+              f"undervalued by {tmi} positions)")
+        print(f"   Evidence Density {card['evidence_density']}%  "
+              f"({card['verified_skills']}/{card['claimed_skills']} skills supported)")
         for d in card["trust_drivers"]:
             print(f"   ✓ {d}")
         for cn in card["concerns"]:
