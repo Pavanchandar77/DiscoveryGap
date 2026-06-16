@@ -12,3 +12,4 @@ submission.csv
 models/
 eval/review_sample.csv
 eval/review_key.csv
+eval/dashboard.json

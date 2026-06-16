@@ -84,13 +84,31 @@ with st.spinner("Scoring, scoring conviction, and finding hidden gems…"):
     cards = _rank(raws)
 
 gems = [c for c in cards if c["quadrant"] == "Hidden Gem"]
-obvious = [c for c in cards if c["quadrant"] == "Obvious Fit"]
-c1, c2, c3 = st.columns(3)
-c1.metric("Candidates ranked", len(cards))
-c2.metric("Hidden Gems (ATS missed)", len(gems))
-c3.metric("Obvious Fits", len(obvious))
+n = len(cards)
+tmis = [c["tmi"] for c in cards if c["tmi"] is not None]
+eff = (sum(1 for c in cards if c["ats_rank"] and c["ats_rank"] <= n) / n) if n else 0.0
 
-# --- Hero: the hidden gems ---
+# --- Screen 1: Talent Market Intelligence (hero dashboard) ---
+st.header("Talent Market Intelligence")
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("ATS Market Efficiency", f"{eff:.0%}", f"-{1-eff:.0%} mispriced", delta_color="inverse")
+m2.metric("Hidden Gems Found", len(gems))
+m3.metric("Avg Mispricing (TMI)", f"{int(np.mean(tmis)):+d}" if tmis else "—")
+m4.metric("Highest TMI", f"{max(tmis):+d}" if tmis else "—")
+
+# --- Screen 2: the single biggest ATS failure ---
+hero = max(cards[:20], key=lambda c: (c["tmi"] if c["tmi"] is not None else -1)) if cards else None
+if hero:
+    st.subheader("Why traditional hiring fails — exhibit A")
+    f1, f2, f3 = st.columns(3)
+    f1.metric("ATS Rank", f"#{hero['ats_rank']}")
+    f2.metric("Our Rank", f"#{hero['our_rank']}")
+    f3.metric("Talent Mispricing Index", f"{hero['tmi']:+d}")
+    st.markdown(f"**{hero['title']}** — " + "  ".join(f"✓ {d}" for d in hero["trust_drivers"]))
+    if hero["concerns"]:
+        st.caption("  ".join(f"⚠ {x}" for x in hero["concerns"]))
+
+# --- Hidden gems ---
 if gems:
     st.subheader("💎 Hidden Gems — high conviction, buried by keyword search")
     for g in gems[:3]:
