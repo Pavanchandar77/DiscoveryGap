@@ -153,6 +153,40 @@ CONSULTING_FIRMS = [
 ]
 PRODUCT_INDUSTRIES = ["software", "fintech", "e-commerce", "edtech", "food delivery"]
 
+# Company-size -> "scale" weight (the JD wants 'shipped at a product company AT SCALE').
+COMPANY_SIZE_SCALE = {
+    "10001+": 1.0, "5001-10000": 0.9, "1001-5000": 0.8, "501-1000": 0.65,
+    "201-500": 0.5, "51-200": 0.4, "11-50": 0.3, "": 0.4,
+}
+
+# ---------------------------------------------------------------------------
+# Additional JD disqualifiers (disqualifiers.py). Precision-first soft negatives.
+# ---------------------------------------------------------------------------
+# Sub-12-month LangChain-only "AI experience" with no pre-LLM ML production depth.
+LLM_WRAPPER_SKILLS = ["langchain", "llamaindex", "prompt engineering", "rag", "openai", "llms", "llm "]
+PRELLM_DEPTH_SKILLS = [
+    "machine learning", "deep learning", "scikit-learn", "tensorflow", "pytorch", "xgboost",
+    "nlp", "computer vision", "recommendation systems", "ranking", "information retrieval",
+    "random forest", "gradient boosting",
+]
+PRELLM_DEPTH_MONTHS = 18         # a pre-LLM ML skill used >= this => "substantial depth" (escape clause)
+LLM_WRAPPER_RECENT_MONTHS = 18   # wrapper skills all used < this => "recent only"
+LANGCHAIN_ONLY_MULT = 0.55
+
+# "Architect"/tech-lead with no production code in 18+ months.
+ARCHITECT_TITLES = ["architect", "tech lead", "technical lead", "engineering manager", "head of engineering"]
+HANDSON_VERBS = ["built", "build", "implemented", "developed", "coded", "wrote", "engineered",
+                 "shipped", "programmed", "prototyped", "optimized", "deployed"]
+ARCHITECT_STALE_MONTHS = 18
+ARCHITECT_NOCODE_MULT = 0.80
+
+# Closed-source 5+ yrs with no external validation (papers/talks/OSS). MILD — absence of
+# external footprint is weak (github is -1 for ~65% of the pool), so this only nudges.
+VALIDATION_TEXT_HINTS = ["open source", "open-source", "published", "paper", "conference",
+                         "talk", "github.com", "kaggle", "patent"]
+CLOSED_SOURCE_MIN_YOE = 5.0
+CLOSED_SOURCE_MULT = 0.93
+
 # ---------------------------------------------------------------------------
 # Plain-language transfer detector: phrases in summary/description that indicate
 # real system-building even without the buzzwords. (The JD's stated "right answer".)

@@ -71,3 +71,15 @@ def has_product_company(cand: Candidate) -> bool:
         if any(p in ind for p in C.PRODUCT_INDUSTRIES) and not is_consulting_company(comp):
             return True
     return False
+
+
+def product_company_scale(cand: Candidate) -> float:
+    """Grade product-company experience by company size in [0,1] — the JD's 'at scale' signal.
+    Returns the largest scale weight among product-industry, non-consulting roles (0 if none)."""
+    best = 0.0
+    for h in cand.history:
+        ind = (h.get("industry") or "").lower()
+        comp = (h.get("company") or "").lower()
+        if any(p in ind for p in C.PRODUCT_INDUSTRIES) and not is_consulting_company(comp):
+            best = max(best, C.COMPANY_SIZE_SCALE.get(h.get("company_size") or "", 0.4))
+    return best
