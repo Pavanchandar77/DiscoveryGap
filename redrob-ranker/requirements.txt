@@ -1,5 +1,17 @@
-numpy>=1.26
-pandas>=2.1
-pyarrow>=14.0
-sentence-transformers>=2.6   # OFFLINE precompute only; not imported by rank.py
-# rank.py itself needs only numpy + pandas + pyarrow (CPU, no network)
+# ---------------------------------------------------------------------------
+# Pinned to the versions this submission was developed and tested against.
+#
+# The SCORED ranking step (rank.py) imports ONLY numpy + pandas + pyarrow — it
+# loads precomputed artifacts and does CPU arithmetic, no network, no model.
+# ---------------------------------------------------------------------------
+numpy==2.4.6
+pandas==3.0.3
+pyarrow==24.0.0
+
+# OFFLINE precompute only (scripts/precompute.py) and the sandbox app — NOT
+# imported by rank.py. Downloads the embedding model from HuggingFace once.
+sentence-transformers==5.5.1
+torch==2.12.0
+
+# Sandbox app only (scripts/make_sandbox_app.py).
+streamlit>=1.40

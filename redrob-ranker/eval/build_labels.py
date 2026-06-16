@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from redrob_ranker import config as C            # noqa: E402
 from redrob_ranker.schema import Candidate        # noqa: E402
 from redrob_ranker.normalize import canon_skills, classify_title, has_product_company  # noqa: E402
-from redrob_ranker import honeypot, disqualifiers # noqa: E402
+from redrob_ranker import honeypot, disqualifiers, signals # noqa: E402
 
 
 def load(path):
@@ -41,20 +41,33 @@ def label(cand: Candidate) -> dict:
     dq_mult, _ = disqualifiers.assess(cand)
     text = cand.all_text.lower()
     plain = sum(1 for p in C.PLAINLANG_FIT_PHRASES if p in text)
+    sys_build = sum(1 for p in C.SYSTEM_BUILD_PHRASES if p in text)  # actually built the system
+    product = has_product_company(cand)
+    avail, _ = signals.availability(cand)
+    in_band = 4.0 <= cand.years_experience <= 10.0  # JD's 5-9 band, with slack
 
     is_stuffer = (klass == "trap" and core_hit >= 4)
-    if is_hp:
+
+    # Two independent kinds of genuine fit evidence, per the JD's stated "right answer":
+    #   - keyword fit: JD core skills truly present in skills[]
+    #   - plain-language fit: career text describes BUILDING a ranking/search/recsys system
+    keyword_fit = core_hit >= 3
+    plainlang_fit = sys_build >= 1 and plain >= 2
+    # A role context that could plausibly be the JD role: a fit title, OR an ambiguous title
+    # (e.g. "Recommendation Systems Engineer", "AI Specialist") backed by real system evidence.
+    role_ok = (klass == "fit") or (klass == "ambiguous" and (sys_build >= 1 or core_hit >= 2))
+    has_fit_evidence = keyword_fit or plainlang_fit
+
+    if is_hp or is_stuffer or dq_mult < 0.2:
         tier = 0
-    elif is_stuffer or dq_mult < 0.2:
-        tier = 0
-    elif klass == "fit" and core_hit >= 3 and has_product_company(cand):
-        tier = 4 if plain >= 2 else 3
-    elif klass == "fit" and (core_hit >= 2 or plain >= 2):
-        tier = 3
-    elif plain >= 2 or core_hit >= 2:
-        tier = 2
+    elif role_ok and has_fit_evidence and product and avail >= 0.8 and in_band:
+        tier = 4  # excellent: fit + product-company ranking/search experience + reachable + in band
+    elif role_ok and (has_fit_evidence or (core_hit >= 2 and product)):
+        tier = 3  # strong fit
+    elif core_hit >= 2 or plain >= 2 or sys_build >= 1:
+        tier = 2  # plausible
     elif core_hit >= 1 or plain >= 1:
-        tier = 1
+        tier = 1  # weak / adjacent
     else:
         tier = 0
     return {"candidate_id": cand.id, "tier": tier,

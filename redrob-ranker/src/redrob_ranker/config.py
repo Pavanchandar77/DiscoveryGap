@@ -13,6 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 ARTIFACTS = ROOT / "artifacts"
 DATA = ROOT / "data"
+MODELS = ROOT / "models"                         # vendored local model dir (offline BGE)
+EMBED_MODEL_LOCAL = MODELS / "bge-small-en-v1.5"  # if present, BGE loads from here, network off
 
 CAND_VECS = ARTIFACTS / "cand_vecs.npy"        # (N, d) float32, L2-normalized
 CAND_META = ARTIFACTS / "cand_meta.parquet"    # parsed/normalized per-candidate features
@@ -25,6 +27,11 @@ SKILL_ALIAS = ARTIFACTS / "skill_alias.json"   # raw skill -> canonical skill
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"   # small, CPU-friendly, strong retrieval. e5-small-v2 also fine.
 EMBED_DIM = 384
 EMBED_BATCH = 256
+# Embedding backend (see embed.py). "hashing" is the DEFAULT: a deterministic, numpy-only,
+# no-download encoder so precompute + the whole pipeline are automatic and reproducible with
+# no HuggingFace dependency. Set to "bge" (or "auto") to use BAAI/bge-small-en-v1.5 when a
+# network is available at precompute time; the cached artifacts are loaded identically either way.
+EMBED_BACKEND = "hashing"   # "hashing" | "bge" | "auto"
 
 # ---------------------------------------------------------------------------
 # Output
@@ -58,6 +65,7 @@ TECH_FIT_TITLES = [
     "research engineer", "data scientist", "software engineer", "backend engineer",
     "search engineer", "nlp engineer", "ml scientist", "staff engineer", "principal engineer",
     "data engineer", "platform engineer", "founding engineer",
+    "recommendation", "ai specialist", "relevance engineer",  # genuine fit titles the list missed
 ]
 # Titles that are the classic stuffer trap (AI skills on a non-tech role).
 TRAP_TITLES = [
@@ -153,6 +161,15 @@ PLAINLANG_FIT_PHRASES = [
     "scoring model", "feature pipeline", "embeddings", "semantic", "a/b test",
     "recommender", "candidate matching", "feed ranking",
 ]
+# The decisive subset: phrases that denote actually BUILDING a ranking/search/recsys
+# system (the JD's stated "right answer"), as opposed to weak supporting phrases like
+# "a/b test" or "feature pipeline" that a data analyst might also use. A genuine
+# plain-language fit must show at least one of these, not just the supporting ones.
+SYSTEM_BUILD_PHRASES = [
+    "recommendation system", "recommender", "search system", "ranking system",
+    "matching system", "built a search", "built search", "candidate matching",
+    "feed ranking", "personalization", "scoring model",
+]
 
 # ---------------------------------------------------------------------------
 # Behavioral availability multiplier knobs (signals.py)
@@ -178,9 +195,36 @@ PREFERRED_LOCATIONS = ["pune", "noida", "hyderabad", "mumbai", "delhi", "gurgaon
 NOTICE_PREFERRED_DAYS = 30
 
 # ---------------------------------------------------------------------------
+# JD "preference" soft-positives (score.py preference_multiplier). These are the
+# JD's stated positive signals — experience band, location/relocation, notice — applied
+# as a GENTLE multiplier (never a gate): the JD says the band is flexible "if other
+# signals are strong", so these reorder near-ties without vetoing a strong fit.
+# ---------------------------------------------------------------------------
+EXP_IDEAL_LO, EXP_IDEAL_HI = 6.0, 8.0    # JD "ideal" 6-8 yrs
+EXP_OK_LO, EXP_OK_HI = 5.0, 9.0          # JD stated band 5-9
+EXP_BAND_OK_MULT = 0.95                   # in 5-9 but outside the 6-8 ideal
+EXP_BAND_FLOOR = 0.80                     # far outside the band (still not a veto)
+EXP_BAND_DECAY = 0.05                     # multiplier lost per year beyond the 5-9 band
+LOC_OTHER_MULT = 0.95                     # not a preferred city AND not willing to relocate
+NOTICE_LONG_MULT = 0.96                   # notice period above NOTICE_PREFERRED_DAYS
+PREFERENCE_FLOOR = 0.70                   # floor on the combined preference multiplier
+
+# ---------------------------------------------------------------------------
 # Honeypot thresholds (honeypot.py) — pure logic
 # ---------------------------------------------------------------------------
+# This is a HARD-KILL gate (floors score, excludes from top-100), so it must be
+# precision-first: a false positive silently kills a legitimate strong candidate.
+# Thresholds calibrated against the real pool distributions (see scripts/honeypot_audit.py):
+#   - sum(history_months) > yoe*12 is naturally ~0 for legit profiles (99th pctile = 0mo),
+#     so a small overlap slack stays clean while catching genuine inconsistencies.
+#   - skill duration_months vs career length is a SMOOTH NOISE TAIL for legit profiles
+#     (modest overage from hobby/pre-career use is normal); only an overage that is BOTH
+#     large in absolute months AND a multiple of the whole career is actually impossible.
+#   - "job precedes education" is a normal life pattern (work, then a later degree) up to
+#     several years; only an absurd gap (working as a child) is impossible.
 TENURE_SLACK_MONTHS = 18         # sum(durations) may exceed yoe*12 by at most this (overlap slack)
-SKILL_DUR_SLACK_MONTHS = 12      # a skill's duration_months may exceed career length by at most this
+SKILL_DUR_SLACK_MONTHS = 24      # a skill's duration may exceed career length by at most this (absolute)
+SKILL_DUR_RATIO = 2.0            # ...AND only impossible if skill duration also exceeds career * this
 EXPERT_ZERO_DUR_MAX = 2          # >2 "expert" skills with ~0 months used => suspicious
+JOB_BEFORE_EDU_SLACK_YEARS = 12  # earliest job may precede earliest education by up to this (late-degree)
 MIN_WORK_AGE = 18
