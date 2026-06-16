@@ -1,17 +1,21 @@
 # Talent Conviction Engine — INDIA.RUNS Track 1
 
-> We didn't build a ranking system. We built a **Talent Conviction Engine** that identifies
-> overlooked candidates, quantifies how certain it is about every recommendation, and explains
-> exactly why traditional hiring systems missed them.
+> **We don't just rank candidates. We identify talent that the market is systematically
+> undervaluing.** A keyword/similarity ATS sees titles and buzzwords; this engine measures the
+> **information asymmetry** between what a résumé *says* and what it *means* — and prices it.
 
-An evidence-aware, **trap-resistant** ranking system for the Intelligent Candidate
-Discovery & Ranking Challenge. It ranks the top 100 candidates from a 100K pool for one
-fixed Senior AI Engineer JD, with per-row reasoning. Every candidate gets three numbers an
-ATS never shows:
+An evidence-aware, **trap-resistant** engine for the Intelligent Candidate Discovery & Ranking
+Challenge. It ranks the top 100 from a 100K pool for one fixed Senior AI Engineer JD, with
+per-row reasoning. Every candidate gets numbers no ATS shows:
 
+**Core metrics**
 - **Fit** — how relevant they are (the gated four-bucket score)
 - **Conviction** — how *certain* we are (evidence quality, corroboration, consistency)
-- **Discovery Gap** — how much a keyword/similarity ATS underrates them (`ats_rank − our_rank`)
+- **Talent Mispricing Index (TMI)** — positions the ATS undervalues them by (`ats_rank − our_rank`)
+
+**Supporting signals**
+- **Evidence Density** — how much of the résumé is actually supported (verified ÷ claimed skills)
+- **Career Trajectory** · **Transferability** · **Availability** · **Authenticity**
 
 …plus two-sided **Trust Drivers (✓) / Concerns (⚠)**. See it per-candidate:
 `python scripts/conviction_demo.py --submission submission.csv` (and the Streamlit sandbox).

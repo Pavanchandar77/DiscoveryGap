@@ -16,6 +16,23 @@ from __future__ import annotations
 from .schema import Candidate
 
 
+def evidence_density(cand: Candidate) -> tuple[int, int, float]:
+    """How much of the resume is actually supported. A claimed skill counts as 'verified' if it
+    has a passing assessment score, real endorsements, or genuine proficiency×duration. Returns
+    (verified, claimed, density). Intuitive: 14/18 = 78% supported vs 3/25 = 12% (keyword stuffer)."""
+    assess = {str(k).lower(): v for k, v in (cand.signals.get("skill_assessment_scores", {}) or {}).items()}
+    claimed = len(cand.skills)
+    verified = 0
+    for s in cand.skills:
+        nm = (s.get("name") or "").lower()
+        a = assess.get(nm)
+        endorsed = int(s.get("endorsements") or 0) >= 5
+        experienced = s.get("proficiency") in ("advanced", "expert") and int(s.get("duration_months") or 0) >= 12
+        if (a is not None and a >= 50) or endorsed or experienced:
+            verified += 1
+    return verified, claimed, (verified / claimed if claimed else 0.0)
+
+
 def _best_assessment(cand: Candidate, names: set[str]) -> tuple[str, float] | None:
     assess = cand.signals.get("skill_assessment_scores", {}) or {}
     best = None
@@ -91,11 +108,14 @@ def card(cand: Candidate, scored: dict, our_rank: int, ats_rank: int | None,
          ats_cutoff: int = 100, in_top: bool = True) -> dict:
     fit = scored["rscore"] if "rscore" in scored else scored["score"]
     conviction = scored.get("confidence", 0.0)
-    gap = (ats_rank - our_rank) if ats_rank is not None else None
+    # Talent Mispricing Index: how many ranking positions the ATS undervalues them by.
+    tmi = (ats_rank - our_rank) if ats_rank is not None else None
+    verified, claimed, density = evidence_density(cand)
     return {
         "candidate_id": cand.id, "title": cand.title,
         "fit": round(100 * fit), "conviction": round(100 * conviction),
-        "discovery_gap": gap, "our_rank": our_rank, "ats_rank": ats_rank,
+        "tmi": tmi, "our_rank": our_rank, "ats_rank": ats_rank,
+        "evidence_density": round(100 * density), "verified_skills": verified, "claimed_skills": claimed,
         "quadrant": quadrant(conviction, ats_rank, in_top=in_top, ats_cutoff=ats_cutoff),
         "trust_drivers": trust_drivers(cand, scored),
         "concerns": concerns(cand, scored),
