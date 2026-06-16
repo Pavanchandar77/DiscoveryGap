@@ -63,6 +63,16 @@ python scripts/discovery_gap.py --submission submission.csv        # baseline-vs
 Watch two numbers: `honeypot_rate@100` must be **0.0** (>0.10 disqualifies), and
 `stuffer_rate@10` should be low.
 
+The self-labels share logic with the ranker, so their metrics are **circular**. For an
+independent check, export a blind, stratified review sheet, rate fit by hand (tier 0-4),
+and measure agreement:
+
+```bash
+python eval/export_review.py --candidates ./data/candidates.jsonl --submission submission.csv
+# fill `human_tier (0-4)` in eval/review_sample.csv, then:
+python eval/review_agreement.py    # mean tier per stratum + Spearman(rank, judgment) + disagreements
+```
+
 ## Layout
 - `rank.py` — single ranking entrypoint (network-guarded, CPU-only).
 - `src/redrob_ranker/` — config, schema, normalize, honeypot, disqualifiers, signals,
