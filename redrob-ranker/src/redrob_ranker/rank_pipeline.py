@@ -13,7 +13,7 @@ import pandas as pd
 from pathlib import Path
 from . import config as C
 from .schema import Candidate
-from .embed import cosine_to_jd
+from .embed import cosine_to_jd, pool_normalize
 from .score import score_candidate
 from . import reasoning
 
@@ -75,7 +75,7 @@ def run(candidates_path: str, out_path: str) -> None:
     meta = pd.read_parquet(C.CAND_META)            # row order == cand_vecs order
     cand_vecs = np.load(C.CAND_VECS)
     jd_vec = np.load(C.JD_VEC)
-    sem_all = cosine_to_jd(cand_vecs, jd_vec)       # (N,)
+    sem_all = pool_normalize(cosine_to_jd(cand_vecs, jd_vec))   # (N,) rescaled to [0,1] across pool
 
     # map candidate_id -> semantic via meta order
     id_to_sem = dict(zip(meta["candidate_id"].tolist(), sem_all.tolist()))
