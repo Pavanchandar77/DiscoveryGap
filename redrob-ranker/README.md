@@ -1,8 +1,20 @@
-# Redrob Intelligent Candidate Ranker — INDIA.RUNS Track 1
+# Talent Conviction Engine — INDIA.RUNS Track 1
+
+> We didn't build a ranking system. We built a **Talent Conviction Engine** that identifies
+> overlooked candidates, quantifies how certain it is about every recommendation, and explains
+> exactly why traditional hiring systems missed them.
 
 An evidence-aware, **trap-resistant** ranking system for the Intelligent Candidate
 Discovery & Ranking Challenge. It ranks the top 100 candidates from a 100K pool for one
-fixed Senior AI Engineer JD, with per-row reasoning.
+fixed Senior AI Engineer JD, with per-row reasoning. Every candidate gets three numbers an
+ATS never shows:
+
+- **Fit** — how relevant they are (the gated four-bucket score)
+- **Conviction** — how *certain* we are (evidence quality, corroboration, consistency)
+- **Discovery Gap** — how much a keyword/similarity ATS underrates them (`ats_rank − our_rank`)
+
+…plus two-sided **Trust Drivers (✓) / Concerns (⚠)**. See it per-candidate:
+`python scripts/conviction_demo.py --submission submission.csv` (and the Streamlit sandbox).
 
 The dataset is deliberately trap-engineered (keyword stuffers, ~80 honeypots, behavioral
 twins, plain-language hidden gems). A naive embedding ranker walks into the traps and gets
