@@ -97,7 +97,10 @@ def _encode_bge(texts: list[str]) -> np.ndarray:
     else:
         model_ref = C.EMBED_MODEL  # hub id — needs a one-time network download
     from sentence_transformers import SentenceTransformer  # heavy import, offline-only
-    model = SentenceTransformer(model_ref, device="cpu")
+    import torch
+    device = "cuda" if torch.cuda.is_available() else "cpu"   # offline precompute only; rank.py is CPU
+    print(f"embed device: {device}")
+    model = SentenceTransformer(model_ref, device=device)
     vecs = model.encode(
         texts, batch_size=C.EMBED_BATCH, normalize_embeddings=True,
         show_progress_bar=True, convert_to_numpy=True,

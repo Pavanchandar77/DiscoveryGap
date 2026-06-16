@@ -52,6 +52,21 @@ python scripts/validate_submission.py submission.csv
 > re-precomputing. The `hashing` backend is the zero-dependency fallback if the model or
 > artifacts are unavailable.
 
+### Reproducibility (first-try `clone` / `build` / `run`)
+
+```bash
+# Ship the precomputed artifacts via Git LFS (after the full-pool precompute):
+bash scripts/ship_artifacts.sh && git push
+
+# Reproduce the scored step in Docker (tiny image: only numpy/pandas/pyarrow, no torch/GPU/network):
+docker build -t redrob-ranker .
+docker run --rm -v "$PWD/data:/app/data" -v "$PWD/out:/app/out" redrob-ranker \
+    --candidates ./data/candidates.jsonl --out ./out/submission.csv
+```
+
+`rank.py` imports no model and no network library (verified by import-isolation), so the image
+builds in seconds and runs deterministically. BGE precompute auto-uses GPU if one is present.
+
 ## Self-evaluation (no live leaderboard — validate locally)
 
 ```bash
