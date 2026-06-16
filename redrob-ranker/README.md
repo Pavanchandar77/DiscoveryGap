@@ -20,17 +20,25 @@ in the **signals**, not the algorithm.
 
 ## Reproduce
 
-Both steps are **CPU-only and need no network** — no model download, no HuggingFace, no
-manual setup. The embedding backend defaults to a deterministic, numpy-only feature-hashing
-encoder (`config.EMBED_BACKEND="hashing"`), so the precompute is byte-reproducible on any
-machine and the judged ranking step loads only the cached artifacts it produces.
+The **scored step (`rank.py`) is always CPU-only and network-free** — it loads only the
+cached artifacts and is guarded against socket use. Embeddings are produced once, offline,
+by `precompute.py`. There are two embedding backends; pick per `REDROB_EMBED_BACKEND`:
+
+- **`bge`** (submission default for quality) — `BAAI/bge-small-en-v1.5`, loaded **offline**
+  from a vendored `models/bge-small-en-v1.5/` (download it once with
+  `hf download BAAI/bge-small-en-v1.5 --local-dir models/bge-small-en-v1.5`). The JD is
+  encoded with BGE's retrieval query prefix; cosines are pool-normalized at rank time.
+- **`hashing`** (default if unset) — a deterministic, numpy-only feature-hashing encoder.
+  No model, no network, byte-reproducible anywhere. Used by the sandbox and as the offline
+  fallback.
 
 ```bash
 pip install -r requirements.txt
 
 # 1) OFFLINE precompute (may exceed 5 min on the full pool — NOT the scored step).
-#    Deterministic, no network. Writes artifacts/ (cand_vecs.npy, jd_vec.npy, cand_meta.parquet).
-python scripts/precompute.py --candidates ./data/candidates.jsonl --jd ./data/job_description.txt
+#    Writes artifacts/ (cand_vecs.npy, jd_vec.npy, cand_meta.parquet).
+REDROB_EMBED_BACKEND=bge python scripts/precompute.py \
+    --candidates ./data/candidates.jsonl --jd ./data/job_description.txt
 
 # 2) ONLINE ranking step (THE scored step: <=5 min, CPU, no network — guard enforced in rank.py)
 python rank.py --candidates ./data/candidates.jsonl --out ./submission.csv
@@ -39,9 +47,10 @@ python rank.py --candidates ./data/candidates.jsonl --out ./submission.csv
 python scripts/validate_submission.py submission.csv
 ```
 
-> Optional higher-fidelity semantics: set `EMBED_BACKEND="bge"` in `config.py` to use
-> `BAAI/bge-small-en-v1.5` (one-time HuggingFace download at precompute time only). This is
-> NOT the default because it would break offline reproducibility of the precompute step.
+> **Shipping for the judges:** commit the precomputed `artifacts/` (use Git LFS for the
+> full-pool `cand_vecs.npy`, ~150 MB) so Stage-3 can run `rank.py` offline without
+> re-precomputing. The `hashing` backend is the zero-dependency fallback if the model or
+> artifacts are unavailable.
 
 ## Self-evaluation (no live leaderboard — validate locally)
 

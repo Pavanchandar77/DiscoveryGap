@@ -51,7 +51,7 @@ compute:
   uses_gpu_for_inference: false                 # Must be false — see compute constraints
   has_network_during_ranking: false             # rank.py monkeypatches sockets off (compliance guard)
   pre_computation_required: true                # we precompute BGE embeddings offline (scripts/precompute.py)
-  pre_computation_time_minutes: 0               # TODO: fill from the real precompute run on the full pool
+  pre_computation_time_minutes: 180             # est. for 100K on CPU (~3 min / 2K measured); update after the real run
 
 # ============================================================================
 # AI tools declaration
