@@ -75,19 +75,45 @@ def capability(cand: Candidate, semantic: float) -> tuple[float, dict]:
 
 
 # ---------------------------------------------------------------------------
-# Growth
+# Growth = trajectory (heading toward the target role) + skill-acquisition velocity
 # ---------------------------------------------------------------------------
+def title_target_relevance(title: str) -> float:
+    """How close a title is to the JD role, in [0,1]. The trajectory dimension that
+    seniority level misses (most tech roles are the same level)."""
+    t = (title or "").lower()
+    if any(x in t for x in C.TITLE_TARGET_HIGH):
+        return 1.0
+    if any(x in t for x in C.TITLE_TARGET_MID):
+        return 0.6
+    if any(x in t for x in C.TRAP_TITLES):
+        return 0.0
+    if any(x in t for x in C.TITLE_TARGET_LOW):
+        return 0.4
+    return 0.3
+
+
 def growth(cand: Candidate) -> tuple[float, dict]:
-    levels = career_title_levels(cand)
-    if len(levels) >= 2:
-        slope = (levels[-1] - levels[0]) / max(1, len(levels) - 1)
-        momentum = min(1.0, max(0.0, 0.5 + slope * 0.25))  # rising titles -> >0.5
+    hist = sorted(cand.history, key=lambda h: (h.get("start_date") or ""))
+    rel = [title_target_relevance(h.get("title", "")) for h in hist]
+    if rel:
+        current = rel[-1]
+        trend = (rel[-1] - rel[0]) if len(rel) > 1 else 0.0   # +ve = moving toward the target role
+        trajectory = min(1.0, 0.6 * current + 0.4 * max(0.0, trend) + (0.1 if trend > 0 else 0.0))
     else:
-        momentum = 0.5
-    # skill breadth as a proxy for skill momentum
+        trajectory = 0.6 * title_target_relevance(cand.title)
+
+    # Skill-acquisition velocity: JD-relevant skills acquired per year of experience. Fast
+    # learners are the hidden gems. Low-weighted (stuffers can fake breadth; the title gate
+    # and authenticity multiplier handle them downstream).
+    relevant = sum(1 for s in canon_skills(cand)
+                   if s in set(C.JD_CORE_SKILLS) | set(C.JD_NICE_SKILLS))
+    yrs = max(1.0, cand.years_experience)
+    velocity = min(1.0, relevant / (yrs * 0.6))   # ~0.6 relevant skills/yr saturates
     breadth = min(1.0, len(cand.skills) / 15.0)
-    score = 0.65 * momentum + 0.35 * breadth
-    return min(1.0, score), {"title_slope": round(momentum, 3), "breadth": round(breadth, 3)}
+
+    score = 0.55 * trajectory + 0.25 * velocity + 0.20 * breadth
+    return min(1.0, score), {"trajectory": round(trajectory, 3),
+                             "velocity": round(velocity, 3), "breadth": round(breadth, 3)}
 
 
 # ---------------------------------------------------------------------------
