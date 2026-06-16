@@ -62,12 +62,15 @@ if up is not None:
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(C.SUBMISSION_HEADER)
-    w.writerows(rows)
+    w.writerows([r[:4] for r in rows])          # HARD-RULE 4 columns only
     st.download_button("Download submission.csv", buf.getvalue(),
                        file_name="submission.csv", mime="text/csv")
 
+    st.caption("Confidence = how sure the system is of each pick (evidence quality, "
+               "corroboration, consistency) — distinct from the fit score.")
     st.dataframe(
-        [{"rank": r[1], "candidate_id": r[0], "score": r[2], "reasoning": r[3]} for r in rows],
+        [{"rank": r[1], "candidate_id": r[0], "score": r[2],
+          "confidence": f"{r[4]}%", "reasoning": r[3]} for r in rows],
         use_container_width=True, hide_index=True,
     )
 else:
