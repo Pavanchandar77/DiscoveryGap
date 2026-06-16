@@ -6,6 +6,21 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from redrob_ranker.schema import Candidate
 from redrob_ranker import honeypot
+from redrob_ranker import embed
+import numpy as np
+
+
+def test_offline_embedding_is_deterministic_and_normalized():
+    """The hashing backend must be byte-reproducible (no network, no salted hash) so the
+    judges' offline precompute reproduces ours exactly."""
+    texts = ["built a ranking system at a product company", "marketing manager"]
+    a = embed._encode_hashing(texts, 384)
+    b = embed._encode_hashing(texts, 384)
+    assert a.shape == (2, 384) and a.dtype == np.float32
+    assert np.array_equal(a, b)                      # deterministic across calls
+    assert np.allclose(np.linalg.norm(a, axis=1), 1.0, atol=1e-4)  # L2-normalized
+    # different texts -> different vectors
+    assert not np.array_equal(a[0], a[1])
 
 
 def test_honeypot_fires_on_impossible_tenure():

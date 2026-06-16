@@ -25,6 +25,11 @@ SKILL_ALIAS = ARTIFACTS / "skill_alias.json"   # raw skill -> canonical skill
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"   # small, CPU-friendly, strong retrieval. e5-small-v2 also fine.
 EMBED_DIM = 384
 EMBED_BATCH = 256
+# Embedding backend (see embed.py). "hashing" is the DEFAULT: a deterministic, numpy-only,
+# no-download encoder so precompute + the whole pipeline are automatic and reproducible with
+# no HuggingFace dependency. Set to "bge" (or "auto") to use BAAI/bge-small-en-v1.5 when a
+# network is available at precompute time; the cached artifacts are loaded identically either way.
+EMBED_BACKEND = "hashing"   # "hashing" | "bge" | "auto"
 
 # ---------------------------------------------------------------------------
 # Output

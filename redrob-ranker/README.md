@@ -20,18 +20,28 @@ in the **signals**, not the algorithm.
 
 ## Reproduce
 
+Both steps are **CPU-only and need no network** — no model download, no HuggingFace, no
+manual setup. The embedding backend defaults to a deterministic, numpy-only feature-hashing
+encoder (`config.EMBED_BACKEND="hashing"`), so the precompute is byte-reproducible on any
+machine and the judged ranking step loads only the cached artifacts it produces.
+
 ```bash
 pip install -r requirements.txt
 
-# 1) OFFLINE precompute (slow part — embeddings; may exceed 5 min, allowed)
+# 1) OFFLINE precompute (may exceed 5 min on the full pool — NOT the scored step).
+#    Deterministic, no network. Writes artifacts/ (cand_vecs.npy, jd_vec.npy, cand_meta.parquet).
 python scripts/precompute.py --candidates ./data/candidates.jsonl --jd ./data/job_description.txt
 
-# 2) ONLINE ranking step (THE scored step: <=5 min, CPU, no network)
+# 2) ONLINE ranking step (THE scored step: <=5 min, CPU, no network — guard enforced in rank.py)
 python rank.py --candidates ./data/candidates.jsonl --out ./submission.csv
 
 # 3) Validate (MUST pass before submitting)
 python scripts/validate_submission.py submission.csv
 ```
+
+> Optional higher-fidelity semantics: set `EMBED_BACKEND="bge"` in `config.py` to use
+> `BAAI/bge-small-en-v1.5` (one-time HuggingFace download at precompute time only). This is
+> NOT the default because it would break offline reproducibility of the precompute step.
 
 ## Self-evaluation (no live leaderboard — validate locally)
 
@@ -58,6 +68,8 @@ candidate_id tie-break; CSV/UTF-8; ranking step ≤5 min CPU no-network (guard i
 embeddings precomputed offline; honeypots floored; reasoning generated from real fields only.
 
 ## Status
-Skeleton runs end-to-end and passes the official validator on a 120-candidate sample.
-Embedding model is stubbed for offline use; bucket weights and thresholds are starting
-points to tune against `eval/`. See `CLAUDE.md` §9 for the remaining build/tuning work.
+Runs end-to-end on the real pool and passes the official validator. The honeypot gate and
+self-labels are calibrated against the real distributions (0 honeypots / 0 stuffers in the
+danger zones); embeddings use the deterministic offline backend so the whole pipeline is
+network-free and reproducible. Bucket weights remain starting points to tune against `eval/`
+(self-labels are a proxy, not the hidden truth — tune by JD logic, not metric-chasing).
