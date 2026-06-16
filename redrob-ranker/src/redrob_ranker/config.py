@@ -58,6 +58,7 @@ TECH_FIT_TITLES = [
     "research engineer", "data scientist", "software engineer", "backend engineer",
     "search engineer", "nlp engineer", "ml scientist", "staff engineer", "principal engineer",
     "data engineer", "platform engineer", "founding engineer",
+    "recommendation", "ai specialist", "relevance engineer",  # genuine fit titles the list missed
 ]
 # Titles that are the classic stuffer trap (AI skills on a non-tech role).
 TRAP_TITLES = [
@@ -152,6 +153,15 @@ PLAINLANG_FIT_PHRASES = [
     "built a search", "built search", "relevance", "retrieval", "personalization",
     "scoring model", "feature pipeline", "embeddings", "semantic", "a/b test",
     "recommender", "candidate matching", "feed ranking",
+]
+# The decisive subset: phrases that denote actually BUILDING a ranking/search/recsys
+# system (the JD's stated "right answer"), as opposed to weak supporting phrases like
+# "a/b test" or "feature pipeline" that a data analyst might also use. A genuine
+# plain-language fit must show at least one of these, not just the supporting ones.
+SYSTEM_BUILD_PHRASES = [
+    "recommendation system", "recommender", "search system", "ranking system",
+    "matching system", "built a search", "built search", "candidate matching",
+    "feed ranking", "personalization", "scoring model",
 ]
 
 # ---------------------------------------------------------------------------
