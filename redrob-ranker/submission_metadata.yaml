@@ -49,9 +49,9 @@ compute:
   python_version: "3.11.4"                      # python --version
   os: "macOS 14.2"                              # Or "Ubuntu 22.04 LTS", etc.
   uses_gpu_for_inference: false                 # Must be false — see compute constraints
-  has_network_during_ranking: false             # Must be false — no API calls during ranking
-  pre_computation_required: false               # true if you pre-compute embeddings or train models offline
-  pre_computation_time_minutes: 0               # Approximate, if applicable
+  has_network_during_ranking: false             # rank.py monkeypatches sockets off (compliance guard)
+  pre_computation_required: true                # we precompute BGE embeddings offline (scripts/precompute.py)
+  pre_computation_time_minutes: 0               # TODO: fill from the real precompute run on the full pool
 
 # ============================================================================
 # AI tools declaration
@@ -60,30 +60,35 @@ compute:
 # may verify these declarations against your code; declarations that contradict
 # your code or your interview are flagged.
 ai_tools_used:
-  - "Claude"        # e.g. for architecture discussion, code review
-  - "GitHub Copilot"  # e.g. for autocomplete
+  - "Claude"        # Claude Code — pair-programming the pipeline, calibration, and review
   # Other options: "ChatGPT", "Cursor", "Gemini", "Codeium", "Other", "None"
 
 ai_usage_summary: |
-  Briefly describe how AI tools were used. Examples:
-  - "Used Claude for code review and architectural discussion. Used Copilot for autocomplete.
-     No candidate data was fed to any LLM."
-  - "Used ChatGPT to debug Python issues and Cursor for refactoring."
-  - "No AI tools used."
+  Used Claude (Claude Code) as a pair programmer: building and reviewing the ranking
+  pipeline, calibrating the honeypot detector and self-label logic against the real
+  pool's distributions, and iterating on the gated scoring and reasoning generator.
+  All design decisions and thresholds are human-reviewed and documented in config.py.
+  Candidate data was processed only locally; no candidate records were sent to any
+  hosted LLM. The scored ranking step (rank.py) makes no network or LLM calls.
 
 # ============================================================================
 # Approach summary (optional but recommended)
 # ============================================================================
 methodology_summary: |
-  ≤200 word summary of your approach. Strongly recommended.
-
-  Example:
-  "Rule-based ranker with explicit reasoning capture. Five scoring components
-  (skills, title+career, experience years, location, education) combined with
-  a multiplicative behavioral-signal modifier. The title component is the
-  decisive signal against keyword-stuffer traps; an endorsement-and-duration
-  trust multiplier on skills catches lazy keyword stuffing. Runtime is ~10
-  seconds for 50K candidates on CPU."
+  A transparent, gated four-bucket ensemble — Capability, Growth, Adaptability, and
+  Authenticity & Availability — with no trained model (there are no labels). The edge
+  is in the signals, not the algorithm. A weighted fit base is multiplied by a title
+  gate and an authenticity multiplier: score = base * title_gate * authenticity, with
+  a hard floor of 0 for honeypots and hard disqualifiers. The multiplicative title gate
+  is the decisive anti-stuffer mechanism — a stuffed AI skill list on a Marketing-Manager
+  title cannot reach the top. Honeypots are removed by pure-logic internal-consistency
+  checks (skill/tenure/date impossibilities), calibrated against the real pool so the
+  hard-kill gate is precision-first. Plain-language transfer (career text describing the
+  building of ranking/search/recsys systems) is credited as first-class evidence, catching
+  the JD's "hidden gem" who is a fit without the buzzwords. Behavioral signals apply a
+  down-weighting availability multiplier. Embeddings (BGE) are precomputed offline; the
+  scored ranking step is CPU-only, network-free numpy arithmetic over cached vectors.
+  Reasoning is feature-templated (no LLM), cites only real fields, and is keyed to rank.
 
 # ============================================================================
 # Declarations
@@ -92,5 +97,5 @@ declarations:
   read_submission_spec: true        # I have read submission_spec.md in full
   code_is_original_work: true       # My code is my team's original work (using AI as a tool is fine)
   no_collusion: true                # I have not coordinated my submission with other teams
-  honeypot_check_done: false        # OPTIONAL — set true if you explicitly checked for honeypots in your ranking
-  reproduction_tested: true         # I have tested that my reproduce_command runs end-to-end
+  honeypot_check_done: true         # explicit pure-logic honeypot gate; 0 honeypots in top-100 (see eval/run_eval.py)
+  reproduction_tested: false        # TODO: set true after the real precompute + rank.py run on the full pool
