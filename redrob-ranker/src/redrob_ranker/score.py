@@ -29,6 +29,38 @@ def title_gate(cand: Candidate, adaptability_info: dict) -> float:
     return 0.40
 
 
+def preference_multiplier(cand: Candidate) -> tuple[float, list[str]]:
+    """Soft multiplier for the JD's stated preferences (experience band, location/
+    relocation, notice period). Gentle by design — the JD treats these as flexible, so
+    they reorder near-ties without vetoing a strong fit. Returns (mult, reasons)."""
+    reasons: list[str] = []
+
+    yoe = cand.years_experience
+    if C.EXP_IDEAL_LO <= yoe <= C.EXP_IDEAL_HI:
+        band = 1.0
+    elif C.EXP_OK_LO <= yoe <= C.EXP_OK_HI:
+        band = C.EXP_BAND_OK_MULT
+    else:
+        d = min(abs(yoe - C.EXP_OK_LO), abs(yoe - C.EXP_OK_HI))
+        band = max(C.EXP_BAND_FLOOR, C.EXP_BAND_OK_MULT - C.EXP_BAND_DECAY * d)
+        reasons.append(f"{yoe:.1f}y outside the 5-9 band")
+
+    loc = cand.location.lower()
+    in_pref = any(p in loc for p in C.PREFERRED_LOCATIONS)
+    relocate = bool(cand.signals.get("willing_to_relocate"))
+    if in_pref or relocate:
+        locf = 1.0
+    else:
+        locf = C.LOC_OTHER_MULT
+        reasons.append("not in a preferred location and not open to relocation")
+
+    nd = cand.signals.get("notice_period_days")
+    notf = 1.0 if (nd is not None and nd <= C.NOTICE_PREFERRED_DAYS) else C.NOTICE_LONG_MULT
+
+    mult = max(C.PREFERENCE_FLOOR, band * locf * notf)
+    return mult, reasons
+
+
 def score_candidate(cand: Candidate, semantic: float) -> dict:
     cap, cap_info = features.capability(cand, semantic)
     grw, grw_info = features.growth(cand)
@@ -37,11 +69,12 @@ def score_candidate(cand: Candidate, semantic: float) -> dict:
 
     base = (C.W_CAPABILITY * cap + C.W_GROWTH * grw + C.W_ADAPTABILITY * adp)
     tg = title_gate(cand, adp_info)
+    pref, pref_reasons = preference_multiplier(cand)
 
     if is_hp:
         final = 0.0
     else:
-        final = base * tg * auth
+        final = base * tg * auth * pref
 
     return {
         "candidate_id": cand.id,
@@ -49,6 +82,8 @@ def score_candidate(cand: Candidate, semantic: float) -> dict:
         "is_honeypot": is_hp,
         "buckets": {"capability": cap, "growth": grw, "adaptability": adp, "authenticity": auth},
         "title_gate": tg,
+        "preference": round(pref, 3),
         "info": {"capability": cap_info, "growth": grw_info,
-                 "adaptability": adp_info, "authenticity": auth_info},
+                 "adaptability": adp_info, "authenticity": auth_info,
+                 "preference_reasons": pref_reasons},
     }

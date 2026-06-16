@@ -193,6 +193,21 @@ PREFERRED_LOCATIONS = ["pune", "noida", "hyderabad", "mumbai", "delhi", "gurgaon
 NOTICE_PREFERRED_DAYS = 30
 
 # ---------------------------------------------------------------------------
+# JD "preference" soft-positives (score.py preference_multiplier). These are the
+# JD's stated positive signals — experience band, location/relocation, notice — applied
+# as a GENTLE multiplier (never a gate): the JD says the band is flexible "if other
+# signals are strong", so these reorder near-ties without vetoing a strong fit.
+# ---------------------------------------------------------------------------
+EXP_IDEAL_LO, EXP_IDEAL_HI = 6.0, 8.0    # JD "ideal" 6-8 yrs
+EXP_OK_LO, EXP_OK_HI = 5.0, 9.0          # JD stated band 5-9
+EXP_BAND_OK_MULT = 0.95                   # in 5-9 but outside the 6-8 ideal
+EXP_BAND_FLOOR = 0.80                     # far outside the band (still not a veto)
+EXP_BAND_DECAY = 0.05                     # multiplier lost per year beyond the 5-9 band
+LOC_OTHER_MULT = 0.95                     # not a preferred city AND not willing to relocate
+NOTICE_LONG_MULT = 0.96                   # notice period above NOTICE_PREFERRED_DAYS
+PREFERENCE_FLOOR = 0.70                   # floor on the combined preference multiplier
+
+# ---------------------------------------------------------------------------
 # Honeypot thresholds (honeypot.py) — pure logic
 # ---------------------------------------------------------------------------
 # This is a HARD-KILL gate (floors score, excludes from top-100), so it must be
