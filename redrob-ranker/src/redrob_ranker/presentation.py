@@ -16,6 +16,14 @@ from __future__ import annotations
 from .schema import Candidate
 
 
+def market_efficiency(our_top_ids: list[str], ats_top_ids: list[str]) -> float:
+    """Of the candidates we identify as strong, what fraction did the ATS also surface?
+    Low efficiency = the market is mispricing most of the top talent. Returns [0,1]."""
+    if not our_top_ids:
+        return 0.0
+    return len(set(our_top_ids) & set(ats_top_ids)) / len(our_top_ids)
+
+
 def evidence_density(cand: Candidate) -> tuple[int, int, float]:
     """How much of the resume is actually supported. A claimed skill counts as 'verified' if it
     has a passing assessment score, real endorsements, or genuine proficiency×duration. Returns

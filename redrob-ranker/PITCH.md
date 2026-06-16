@@ -9,6 +9,26 @@ quantifies the information asymmetry between what a résumé *says* (keywords, t
 
 ---
 
+## Open with the question (15 seconds)
+
+> *Financial markets can systematically misprice assets. We asked: can hiring systems
+> systematically misprice **people**?*
+
+Then the dashboard — the whole thesis in one screen:
+
+```
+              TALENT MARKET INTELLIGENCE
+   ATS Market Efficiency      8%   (92% of top talent mispriced)
+   Hidden Gems Found          85
+   Average Mispricing (TMI)   +582
+   Highest Mispricing (TMI)   +1803
+```
+
+`python scripts/market_dashboard.py --submission submission.csv --json eval/dashboard.json`
+emits this plus a frontend-ready payload (hero, cards, ATS-vs-us, stuffer counts).
+
+---
+
 ## Open with a failure (the killer demo)
 
 **Slide 1 — Traditional ATS rank #552.**
@@ -66,6 +86,22 @@ On our validation sample, **85 of the top 100 are Hidden Gems** the ATS ranked p
   one-command Docker repro. Knows when it might be wrong (Conviction) and says so.
 
 ---
+
+## Demo flow — Problem → Failure → Insight → Solution → Evidence
+
+A judge should grasp the whole idea in under 20 seconds, without reading a technical doc.
+
+| Time | Screen | Shows |
+|---|---|---|
+| 0:15 | **Hero dashboard** | Market Efficiency 8%, 85 Hidden Gems, Avg/Highest TMI → "these guys find overlooked talent" |
+| 0:30 | **The ATS failure** | ATS #552 → Our #19 → **TMI +533**, then "Why ATS missed them" |
+| 1:00 | **Conviction card** | Fit / Conviction / TMI / Evidence Density + Trust Drivers ✓ and Concerns ⚠ |
+| 0:30 | **The bet map** | every candidate in the Fit×Conviction quadrant; Hidden Gems pop |
+| 0:30 | **ATS vs us** | ATS top-10 (Marketing Manager, Ops Lead…) vs our top-10 (ML / NLP / Search Eng); 13 stuffers in ATS, 0 in ours |
+
+**Do NOT put on screen** (implementation details — only if a judge asks): Qdrant, FAISS, BGE,
+embeddings, cosine similarity, sentence-transformers, Docker, XGBoost. Lead with the *mental
+model*, not the stack.
 
 ## Hero statement
 
