@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 from . import config as C
 from .schema import Candidate
-from .normalize import canon_skills, classify_title, career_title_levels
+from .normalize import canon_skills, canon_skill, classify_title, career_title_levels, product_company_scale
 from . import honeypot, disqualifiers, signals
 
 
@@ -22,21 +22,45 @@ def capability(cand: Candidate, semantic: float) -> tuple[float, dict]:
     skill_score = min(1.0, 0.7 * (len(core_hit) / max(1, len(core))) +
                             0.3 * (len(nice_hit) / max(1, len(nice))) * 2)
 
-    # evidence: assessment scores corroborate claims; proficiency*duration; endorsements
+    # --- Evidence (the JD calls skill_assessment_scores the strongest evidence signal) ---
     assess = cand.signals.get("skill_assessment_scores", {}) or {}
-    if assess:
-        ev_assess = np.mean([v for v in assess.values()]) / 100.0
-    else:
-        ev_assess = 0.4
+    assess_lower = {str(k).lower(): v for k, v in assess.items()}
     prof_w = {"beginner": 0.25, "intermediate": 0.5, "advanced": 0.8, "expert": 1.0}
-    dur_evid = []
+
+    # Corroborate CLAIMED JD-relevant skills with their assessment scores; flag bluffs
+    # (advanced/expert claim on a JD skill with a low assessment = an unproven claim).
+    claimed_assess, dur_evid, bluffs = [], [], 0
     for sk in cand.skills:
-        if canon_skills_one(sk) in (core | nice):
+        nm_raw = (sk.get("name") or "").lower()
+        canon = canon_skill(sk.get("name", ""))
+        if canon in (core | nice):
             w = prof_w.get(sk.get("proficiency", "intermediate"), 0.5)
             d = min(1.0, int(sk.get("duration_months") or 0) / 36.0)
             dur_evid.append(w * d)
+            a = assess_lower.get(nm_raw)
+            if a is not None:
+                claimed_assess.append(a / 100.0)
+                if sk.get("proficiency") in ("advanced", "expert") and a < 40:
+                    bluffs += 1
+    if claimed_assess:
+        corroboration = float(np.mean(claimed_assess))          # assessment of the claimed JD skills
+    elif assess:
+        corroboration = float(np.mean(list(assess.values()))) / 100.0
+    else:
+        corroboration = 0.45
     ev_dur = float(np.mean(dur_evid)) if dur_evid else 0.3
-    evidence = 0.6 * ev_assess + 0.4 * ev_dur
+
+    # Product-company-at-scale and external validation are positive evidence (JD).
+    prod_scale = product_company_scale(cand)
+    gh = float(cand.signals.get("github_activity_score", -1) or -1)
+    text = cand.all_text.lower()
+    validation = min(1.0, (min(0.6, gh / 20.0 * 0.6) if gh > 0 else 0.0)
+                    + (0.25 if cand.certifications else 0.0)
+                    + (0.15 if any(h in text for h in C.VALIDATION_TEXT_HINTS) else 0.0))
+
+    evidence = (0.40 * corroboration + 0.25 * ev_dur +
+                0.25 * prod_scale + 0.10 * validation)
+    evidence *= (1.0 - 0.15 * min(bluffs, 3))   # discount unproven (bluffed) JD-skill claims
 
     sem = max(0.0, semantic)  # cosine can be slightly negative; floor at 0
     score = (C.W_CAP_SKILL * skill_score +
@@ -45,12 +69,9 @@ def capability(cand: Candidate, semantic: float) -> tuple[float, dict]:
     return min(1.0, score), {
         "core_hit": sorted(core_hit), "nice_hit": sorted(nice_hit),
         "semantic": round(sem, 3), "evidence": round(evidence, 3),
+        "corroboration": round(corroboration, 3), "bluffs": bluffs,
+        "prod_scale": round(prod_scale, 3),
     }
-
-
-def canon_skills_one(sk: dict) -> str:
-    from .normalize import canon_skill
-    return canon_skill(sk.get("name", ""))
 
 
 # ---------------------------------------------------------------------------

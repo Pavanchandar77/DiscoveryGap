@@ -10,3 +10,5 @@ data/*.gz
 submission.csv
 .DS_Store
 models/
+eval/review_sample.csv
+eval/review_key.csv
