@@ -1,0 +1,9 @@
+.git
+models/
+**/__pycache__/
+*.pyc
+*.zip
+eval/*.parquet
+eval/review_*.csv
+submission*.csv
+out/

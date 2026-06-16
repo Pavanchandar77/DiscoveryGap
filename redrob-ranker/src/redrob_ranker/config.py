@@ -78,6 +78,18 @@ TRAP_TITLES = [
 # Business Analyst / Project Manager are ambiguous: only allowed if description shows
 # genuine ML/IR system-building (handled in features.py, not a flat ban).
 
+# Title target-relevance for the TRAJECTORY score (is this role moving toward the JD role?).
+# Seniority level barely varies here (most tech roles == level 2), so trajectory is measured
+# as movement toward AI/ML/retrieval roles over time — much harder to game than keywords.
+TITLE_TARGET_HIGH = ["ai engineer", "machine learning", "ml engineer", "ml scientist",
+                     "applied scientist", "applied ml", "research engineer", "nlp engineer",
+                     "search engineer", "recommendation", "relevance engineer", "ai specialist",
+                     "ai research", "data scientist"]
+TITLE_TARGET_MID = ["data engineer", "software engineer", "backend engineer", "platform engineer",
+                    "analytics engineer", "founding engineer", "staff engineer", "principal engineer"]
+TITLE_TARGET_LOW = ["analyst", "developer", "qa engineer", "devops", "frontend", "mobile", "full stack",
+                    "full-stack", "cloud engineer"]
+
 # Title seniority levels for career-momentum scoring.
 TITLE_LEVELS = {
     "intern": 0, "junior": 1, "associate": 1, "": 2,

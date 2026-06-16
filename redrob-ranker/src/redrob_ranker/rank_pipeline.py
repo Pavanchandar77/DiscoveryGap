@@ -55,16 +55,19 @@ def rank_records(raws: list[dict], id_to_sem: dict[str, float],
     rows_out = []
     for i, (cand, s) in enumerate(top, start=1):
         text = reasoning.make(cand, s, i)
-        rows_out.append([cand.id, i, f"{s['rscore']:.{C.SCORE_DECIMALS}f}", text])
+        # 5th element = confidence% (NOT written to the submission CSV; for sandbox/audit only).
+        rows_out.append([cand.id, i, f"{s['rscore']:.{C.SCORE_DECIMALS}f}", text,
+                         round(100 * s.get("confidence", 0.0))])
     return rows_out
 
 
 def write_csv(rows_out: list[list], out_path: str) -> None:
+    """Writes the HARD-RULE 4-column submission (any extra trailing fields are dropped)."""
     out_path = Path(out_path)
     with open(out_path, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         w.writerow(C.SUBMISSION_HEADER)
-        w.writerows(rows_out)
+        w.writerows([r[:4] for r in rows_out])
     print(f"wrote {len(rows_out)} rows to {out_path}")
 
 

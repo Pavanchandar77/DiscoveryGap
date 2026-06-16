@@ -12,6 +12,7 @@ from . import config as C
 from .schema import Candidate
 from .normalize import classify_title
 from . import features
+from .confidence import confidence
 
 
 def title_gate(cand: Candidate, adaptability_info: dict) -> float:
@@ -76,7 +77,7 @@ def score_candidate(cand: Candidate, semantic: float) -> dict:
     else:
         final = base * tg * auth * pref
 
-    return {
+    result = {
         "candidate_id": cand.id,
         "score": final,
         "is_honeypot": is_hp,
@@ -87,3 +88,7 @@ def score_candidate(cand: Candidate, semantic: float) -> dict:
                  "adaptability": adp_info, "authenticity": auth_info,
                  "preference_reasons": pref_reasons},
     }
+    conf, conf_factors = confidence(cand, result)   # how sure are we (separate from the score)
+    result["confidence"] = round(conf, 3)
+    result["info"]["confidence_factors"] = conf_factors
+    return result
