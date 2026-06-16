@@ -86,9 +86,14 @@ methodology_summary: |
   hard-kill gate is precision-first. Plain-language transfer (career text describing the
   building of ranking/search/recsys systems) is credited as first-class evidence, catching
   the JD's "hidden gem" who is a fit without the buzzwords. Behavioral signals apply a
-  down-weighting availability multiplier. Embeddings (BGE) are precomputed offline; the
-  scored ranking step is CPU-only, network-free numpy arithmetic over cached vectors.
-  Reasoning is feature-templated (no LLM), cites only real fields, and is keyed to rank.
+  down-weighting availability multiplier, and a soft preference for the JD's stated
+  experience band, location, and notice period. Semantic fit is one capability sub-signal,
+  encoded offline into cached vectors; the default encoder is a deterministic, network-free
+  lexical backend (reproducible by the judges with no model download), with BGE available as
+  an optional upgrade. The ranking quality therefore rests on the structured trap-resistant
+  signals, not on semantic similarity — by design (signals > models). The scored ranking step
+  is CPU-only, network-free numpy arithmetic over cached vectors. Reasoning is feature-templated
+  (no LLM), cites only real profile fields, and is keyed to rank.
 
 # ============================================================================
 # Declarations

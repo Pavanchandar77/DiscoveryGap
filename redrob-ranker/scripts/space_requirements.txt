@@ -1,0 +1,8 @@
+# Requirements for the HuggingFace Space (Streamlit sandbox) ONLY.
+# Deliberately minimal: the sandbox uses the deterministic, numpy-only "hashing" embedding
+# backend (config.EMBED_BACKEND="hashing"), so the Space needs NO torch / sentence-transformers
+# and NEVER reaches HuggingFace for a model at startup — it cannot 403 the way precompute did.
+streamlit>=1.40
+numpy==2.4.6
+pandas==3.0.3
+pyarrow==24.0.0
