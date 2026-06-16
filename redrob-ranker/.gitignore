@@ -9,3 +9,4 @@ data/*.jsonl
 data/*.gz
 submission.csv
 .DS_Store
+models/

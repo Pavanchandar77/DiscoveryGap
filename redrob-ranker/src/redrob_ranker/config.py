@@ -13,6 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 ARTIFACTS = ROOT / "artifacts"
 DATA = ROOT / "data"
+MODELS = ROOT / "models"                         # vendored local model dir (offline BGE)
+EMBED_MODEL_LOCAL = MODELS / "bge-small-en-v1.5"  # if present, BGE loads from here, network off
 
 CAND_VECS = ARTIFACTS / "cand_vecs.npy"        # (N, d) float32, L2-normalized
 CAND_META = ARTIFACTS / "cand_meta.parquet"    # parsed/normalized per-candidate features

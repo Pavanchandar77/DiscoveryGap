@@ -19,6 +19,7 @@ products. The chosen backend is baked into the cached artifacts; the judged path
 from __future__ import annotations
 import re
 import zlib
+from pathlib import Path
 import numpy as np
 from . import config as C
 
@@ -64,8 +65,18 @@ def _encode_hashing(texts: list[str], dim: int) -> np.ndarray:
 
 
 def _encode_bge(texts: list[str]) -> np.ndarray:
+    # Prefer a vendored local model dir so this works fully offline (no HuggingFace reach-out).
+    local = getattr(C, "EMBED_MODEL_LOCAL", None)
+    if local is not None and Path(local).exists():
+        import os
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+        model_ref = str(local)
+        print(f"embed backend: bge (local: {local})")
+    else:
+        model_ref = C.EMBED_MODEL  # hub id — needs a one-time network download
     from sentence_transformers import SentenceTransformer  # heavy import, offline-only
-    model = SentenceTransformer(C.EMBED_MODEL, device="cpu")
+    model = SentenceTransformer(model_ref, device="cpu")
     vecs = model.encode(
         texts, batch_size=C.EMBED_BATCH, normalize_embeddings=True,
         show_progress_bar=True, convert_to_numpy=True,
