@@ -25,6 +25,27 @@ from . import config as C
 
 _TOKEN_RE = re.compile(r"[a-z0-9+#./_-]+")
 
+# BGE retrieval works best with an instruction on the QUERY side (the JD); passages
+# (candidate text) are encoded raw. This materially improves discrimination.
+BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+
+
+def pool_normalize(sem: np.ndarray) -> np.ndarray:
+    """Map a pool of JD-cosines to [0,1] via robust min-max (2nd–98th pctile clip).
+
+    Raw cosines sit in a narrow high band (e.g. BGE 0.66–0.82), so unnormalized they act
+    as a near-constant offset and never discriminate. Rescaling across the pool turns the
+    *relative* semantic ordering into a usable signal. The semantic term stays gated by the
+    title veto / authenticity / preference multipliers, so trap-resistance is unaffected.
+    """
+    sem = np.asarray(sem, dtype="float64")
+    if sem.size == 0:
+        return sem.astype("float32")
+    lo, hi = np.percentile(sem, 2), np.percentile(sem, 98)
+    if hi - lo < 1e-9:
+        return np.zeros_like(sem, dtype="float32")
+    return np.clip((sem - lo) / (hi - lo), 0.0, 1.0).astype("float32")
+
 
 def _tokens(text: str) -> list[str]:
     """Word tokens plus char trigrams (subword robustness for skills/tech terms)."""
@@ -105,6 +126,15 @@ def encode_texts(texts: list[str]) -> np.ndarray:
 def encode_one(text: str) -> np.ndarray:
     """OFFLINE ONLY. Encode a single string (used for the JD)."""
     return encode_texts([text])[0]
+
+
+def encode_query(text: str) -> np.ndarray:
+    """OFFLINE ONLY. Encode the JD as a retrieval QUERY. For BGE this prepends the
+    recommended instruction prefix; for the lexical backend it is identical to encode_one."""
+    backend = getattr(C, "EMBED_BACKEND", "hashing")
+    if backend in ("bge", "auto"):
+        return encode_texts([BGE_QUERY_PREFIX + text])[0]
+    return encode_one(text)
 
 
 def cosine_to_jd(cand_vecs: np.ndarray, jd_vec: np.ndarray) -> np.ndarray:

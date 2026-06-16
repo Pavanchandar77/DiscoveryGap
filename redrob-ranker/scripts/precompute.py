@@ -24,7 +24,7 @@ from redrob_ranker import config as C           # noqa: E402
 from redrob_ranker.schema import Candidate       # noqa: E402
 from redrob_ranker.normalize import canon_skill  # noqa: E402
 from redrob_ranker import honeypot               # noqa: E402
-from redrob_ranker.embed import encode_texts, encode_one  # noqa: E402
+from redrob_ranker.embed import encode_texts, encode_query  # noqa: E402
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -78,7 +78,7 @@ def main():
     print("encoding candidate texts (this is the slow part)...")
     vecs = encode_texts(texts)
     np.save(C.CAND_VECS, vecs)
-    np.save(C.JD_VEC, encode_one(jd_text))
+    np.save(C.JD_VEC, encode_query(jd_text))
     C.SKILL_ALIAS.write_text(json.dumps(alias_obs, indent=2))
     print("precompute complete:", C.ARTIFACTS)
 

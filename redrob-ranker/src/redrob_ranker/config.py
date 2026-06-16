@@ -5,6 +5,7 @@ self-labeled eval set (eval/). Keeping all knobs in one documented place makes t
 loop fast and keeps rank.py readable. DO NOT scatter magic numbers across modules.
 """
 from __future__ import annotations
+import os
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -27,11 +28,12 @@ SKILL_ALIAS = ARTIFACTS / "skill_alias.json"   # raw skill -> canonical skill
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"   # small, CPU-friendly, strong retrieval. e5-small-v2 also fine.
 EMBED_DIM = 384
 EMBED_BATCH = 256
-# Embedding backend (see embed.py). "hashing" is the DEFAULT: a deterministic, numpy-only,
-# no-download encoder so precompute + the whole pipeline are automatic and reproducible with
-# no HuggingFace dependency. Set to "bge" (or "auto") to use BAAI/bge-small-en-v1.5 when a
-# network is available at precompute time; the cached artifacts are loaded identically either way.
-EMBED_BACKEND = "hashing"   # "hashing" | "bge" | "auto"
+# Embedding backend (see embed.py). Default "hashing": a deterministic, numpy-only,
+# no-download encoder so the sandbox and any no-model environment work offline. Override via
+# the REDROB_EMBED_BACKEND env var to "bge" to use BAAI/bge-small-en-v1.5 (loaded offline from
+# models/bge-small-en-v1.5 — see EMBED_MODEL_LOCAL). The cached artifacts are loaded identically
+# by rank.py either way, so the chosen backend only matters at precompute time.
+EMBED_BACKEND = os.environ.get("REDROB_EMBED_BACKEND", "hashing")   # "hashing" | "bge" | "auto"
 
 # ---------------------------------------------------------------------------
 # Output

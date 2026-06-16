@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from redrob_ranker import config as C            # noqa: E402
 from redrob_ranker.schema import Candidate        # noqa: E402
-from redrob_ranker.embed import encode_texts, encode_one, cosine_to_jd  # noqa: E402
+from redrob_ranker.embed import encode_texts, encode_query, cosine_to_jd, pool_normalize  # noqa: E402
 from redrob_ranker.rank_pipeline import rank_records, write_csv          # noqa: E402
 
 st.set_page_config(page_title="Redrob Intelligent Candidate Ranker", layout="wide")
@@ -41,7 +41,7 @@ def _jd_text() -> str:
 
 @st.cache_resource(show_spinner="Loading embedding model (first run only)…")
 def _jd_vec() -> np.ndarray:
-    return encode_one(_jd_text())
+    return encode_query(_jd_text())
 
 
 up = st.file_uploader("candidates.jsonl (<=100)", type=["jsonl"])
@@ -52,7 +52,7 @@ if up is not None:
     with st.spinner("Embedding the sample and scoring…"):
         texts = [Candidate(r).all_text for r in raws]
         cand_vecs = encode_texts(texts)                      # (n, d), L2-normalized
-        sem = cosine_to_jd(cand_vecs, _jd_vec())             # (n,)
+        sem = pool_normalize(cosine_to_jd(cand_vecs, _jd_vec()))   # (n,) rescaled across the sample
         id_to_sem = {Candidate(r).id: float(s) for r, s in zip(raws, sem)}
         rows = rank_records(raws, id_to_sem, top_k=min(C.TOP_K, len(raws)))
 
