@@ -7,3 +7,6 @@ eval/*.parquet
 eval/review_*.csv
 submission*.csv
 out/
+frontend/node_modules/
+frontend/dist/
+frontend/.env*

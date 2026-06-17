@@ -1,0 +1,12 @@
+# One-click deploy of the whole product (frontend + ranking API) as a single
+# Render web service. Point Render at this repo; it serves the dashboard and the
+# /demo + /rank API from one URL.
+services:
+  - type: web
+    name: discovery-talent-intelligence
+    runtime: docker
+    dockerfilePath: ./redrob-ranker/Dockerfile.web
+    dockerContext: ./redrob-ranker
+    plan: starter            # bump if /rank on large pools needs more RAM
+    healthCheckPath: /health
+    autoDeploy: true

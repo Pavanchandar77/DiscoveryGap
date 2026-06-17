@@ -1,0 +1,34 @@
+# One-service deploy: builds the Discovery frontend and serves it together with
+# the FastAPI ranking API from a single container (same origin, one host).
+#
+#   docker build -f Dockerfile.web -t discovery-web .
+#   docker run --rm -p 8000:8000 discovery-web
+#   open http://localhost:8000        # dashboard + /demo + /rank
+#
+# (The batch reproduce step still uses the plain ./Dockerfile + rank.py.)
+
+# ---------- Stage 1: build the frontend ----------
+FROM node:20-slim AS frontend
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# ---------- Stage 2: API + static frontend ----------
+FROM python:3.11-slim
+WORKDIR /app
+
+# Engine deps (numpy/pandas/pyarrow) + the HTTP layer (fastapi/uvicorn).
+RUN pip install --no-cache-dir \
+    numpy==2.4.6 pandas==3.0.3 pyarrow==24.0.0 \
+    "fastapi>=0.115" "uvicorn[standard]>=0.30" "python-multipart>=0.0.9"
+
+# Backend source + precomputed artifacts (frontend/node_modules & dist are
+# excluded via .dockerignore; the built dist is copied from stage 1 below).
+COPY . .
+COPY --from=frontend /app/frontend/dist ./frontend/dist
+
+EXPOSE 8000
+# Honour the platform-provided $PORT (Render/Railway/Fly) and default to 8000.
+CMD ["sh", "-c", "uvicorn scripts.api:app --host 0.0.0.0 --port ${PORT:-8000}"]
