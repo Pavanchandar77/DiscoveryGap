@@ -1,0 +1,5 @@
+# Backend API (scripts/api.py) — on top of the base requirements.txt.
+# The ranking engine itself needs only numpy/pandas/pyarrow; these add the HTTP layer.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9

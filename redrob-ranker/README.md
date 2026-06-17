@@ -20,6 +20,17 @@ per-row reasoning. Every candidate gets numbers no ATS shows:
 …plus two-sided **Trust Drivers (✓) / Concerns (⚠)**. See it per-candidate:
 `python scripts/conviction_demo.py --submission submission.csv` (and the Streamlit sandbox).
 
+## Product layer — API for a web frontend
+The engine is exposed as one HTTP API so a frontend (e.g. Google AI Studio) can let a recruiter
+**upload a candidates zip and see results**, without knowing how ranking works:
+```bash
+pip install -r requirements.txt -r scripts/api_requirements.txt
+uvicorn scripts.api:app --host 0.0.0.0 --port 8000
+# POST /rank  (multipart file = candidates.zip / .jsonl)  ->  dashboard JSON
+```
+The JSON shape (hero, cards, market efficiency, ATS-vs-us, …) is specced in
+[`FRONTEND_CONTRACT.md`](FRONTEND_CONTRACT.md). Architecture: `rank engine → dashboard JSON → website`.
+
 The dataset is deliberately trap-engineered (keyword stuffers, ~80 honeypots, behavioral
 twins, plain-language hidden gems). A naive embedding ranker walks into the traps and gets
 disqualified at the honeypot gate. This system **detects the traps** and reasons about the
