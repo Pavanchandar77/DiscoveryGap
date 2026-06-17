@@ -18,6 +18,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -77,3 +78,12 @@ async def rank(file: UploadFile = File(...), top_k: int = Query(100, ge=1, le=10
     if len(raws) > MAX_CANDIDATES:
         raise HTTPException(413, f"Too many candidates ({len(raws)} > {MAX_CANDIDATES}).")
     return service.rank_and_dashboard(raws, _jd_text(), top_k=top_k)
+
+
+# Serve the built frontend so the whole product is one deployable service: the
+# dashboard SPA and the API live on the same origin. Mounted last so the API
+# routes above take precedence. Skipped if the frontend hasn't been built yet
+# (pure-API use still works); build it with: cd frontend && npm ci && npm run build
+_FRONTEND_DIST = ROOT / "frontend" / "dist"
+if _FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="frontend")

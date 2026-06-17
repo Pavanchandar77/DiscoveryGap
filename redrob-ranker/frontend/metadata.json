@@ -1,0 +1,6 @@
+{
+  "name": "Discovery",
+  "description": "Talent Market Intelligence platform that identifies high-potential candidates traditional ATS systems miss.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

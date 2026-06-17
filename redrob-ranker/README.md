@@ -20,14 +20,35 @@ per-row reasoning. Every candidate gets numbers no ATS shows:
 …plus two-sided **Trust Drivers (✓) / Concerns (⚠)**. See it per-candidate:
 `python scripts/conviction_demo.py --submission submission.csv` (and the Streamlit sandbox).
 
-## Product layer — API for a web frontend
-The engine is exposed as one HTTP API so a frontend (e.g. Google AI Studio) can let a recruiter
-**upload a candidates zip and see results**, without knowing how ranking works:
+## Product layer — one web app (frontend + API in this repo)
+The recruiter-facing dashboard (`frontend/`, React + Vite) and the ranking API live in **one
+repo and deploy as one service**: FastAPI serves the built frontend and the API from the same
+origin, so a recruiter can **upload a candidates zip and see results** without knowing how
+ranking works.
+
 ```bash
 pip install -r requirements.txt -r scripts/api_requirements.txt
+( cd frontend && npm ci && npm run build )      # build the dashboard once
 uvicorn scripts.api:app --host 0.0.0.0 --port 8000
-# POST /rank  (multipart file = candidates.zip / .jsonl)  ->  dashboard JSON
+# open http://localhost:8000   ->  dashboard + GET /demo + POST /rank
 ```
+
+- `GET /health` → `{"status":"ok"}`
+- `GET /demo` → precomputed 100K dashboard JSON (`eval/dashboard.json`, if present)
+- `POST /rank?top_k=100` → multipart `file` = `.zip` / `.jsonl` / `.jsonl.gz` → dashboard JSON
+- `GET /` → the dashboard SPA (served from `frontend/dist` when built)
+
+**Deploy as a single host** (Render/Railway/Fly/Cloud Run) with the multi-stage
+[`Dockerfile.web`](Dockerfile.web) — it builds the frontend and serves everything on `$PORT`:
+```bash
+docker build -f Dockerfile.web -t discovery-web .
+docker run --rm -p 8000:8000 discovery-web
+```
+A ready [`render.yaml`](../render.yaml) (repo root) deploys this in one click.
+
+Frontend dev (hot reload) runs separately and proxies the API:
+`cd frontend && npm run dev` (see [`frontend/README.md`](frontend/README.md)).
+
 The JSON shape (hero, cards, market efficiency, ATS-vs-us, …) is specced in
 [`FRONTEND_CONTRACT.md`](FRONTEND_CONTRACT.md). Architecture: `rank engine → dashboard JSON → website`.
 
