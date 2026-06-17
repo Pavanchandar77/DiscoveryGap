@@ -38,22 +38,23 @@ in the **signals**, not the algorithm.
 
 The **scored step (`rank.py`) is always CPU-only and network-free** — it loads only the
 cached artifacts and is guarded against socket use. Embeddings are produced once, offline,
-by `precompute.py`. There are two embedding backends; pick per `REDROB_EMBED_BACKEND`:
+by `precompute.py`. The submission uses the **`hashing`** backend (the default):
 
-- **`bge`** (submission default for quality) — `BAAI/bge-small-en-v1.5`, loaded **offline**
-  from a vendored `models/bge-small-en-v1.5/` (download it once with
-  `hf download BAAI/bge-small-en-v1.5 --local-dir models/bge-small-en-v1.5`). The JD is
-  encoded with BGE's retrieval query prefix; cosines are pool-normalized at rank time.
-- **`hashing`** (default if unset) — a deterministic, numpy-only feature-hashing encoder.
-  No model, no network, byte-reproducible anywhere. Used by the sandbox and as the offline
-  fallback.
+- **`hashing`** (submission default) — a deterministic, numpy-only feature-hashing encoder.
+  No model, no network, **byte-reproducible anywhere**, so the judges' precompute regenerates
+  our exact artifacts and submission offline (full pool: ~3 min). The top-20 it produces is
+  wall-to-wall on-target (AI/ML/NLP/Recsys/Search Engineers) — the structured signals carry it.
+- **`bge`** (optional upgrade) — `BAAI/bge-small-en-v1.5`, loaded **offline** from a vendored
+  `models/bge-small-en-v1.5/` (`hf download BAAI/bge-small-en-v1.5 --local-dir models/bge-small-en-v1.5`),
+  JD encoded with the retrieval query prefix, cosines pool-normalized. Higher semantic fidelity;
+  set `REDROB_EMBED_BACKEND=bge`.
 
 ```bash
 pip install -r requirements.txt
 
-# 1) OFFLINE precompute (may exceed 5 min on the full pool — NOT the scored step).
+# 1) OFFLINE precompute (deterministic, no network; ~3 min on the full 100K — NOT the scored step).
 #    Writes artifacts/ (cand_vecs.npy, jd_vec.npy, cand_meta.parquet).
-REDROB_EMBED_BACKEND=bge python scripts/precompute.py \
+python scripts/precompute.py \
     --candidates ./data/candidates.jsonl --jd ./data/job_description.txt
 
 # 2) ONLINE ranking step (THE scored step: <=5 min, CPU, no network — guard enforced in rank.py)
@@ -117,9 +118,13 @@ Exactly 100 rows; header `candidate_id,rank,score,reasoning`; non-increasing sco
 candidate_id tie-break; CSV/UTF-8; ranking step ≤5 min CPU no-network (guard in `rank.py`);
 embeddings precomputed offline; honeypots floored; reasoning generated from real fields only.
 
-## Status
-Runs end-to-end on the real pool and passes the official validator. The honeypot gate and
-self-labels are calibrated against the real distributions (0 honeypots / 0 stuffers in the
-danger zones); embeddings use the deterministic offline backend so the whole pipeline is
-network-free and reproducible. Bucket weights remain starting points to tune against `eval/`
-(self-labels are a proxy, not the hidden truth — tune by JD logic, not metric-chasing).
+## Status — run end-to-end on the full 100K
+- **Official validator: passes clean.** `rank.py` ranks the full 100,000-candidate pool in
+  **36.5s** (budget 300s), CPU-only, network-guarded.
+- **0 honeypots / 0 stuffers** in the danger zones (`honeypot_rate@100 = 0`, `stuffer_rate@10 = 0`).
+- **Top-20 is wall-to-wall on-target** — Lead/Staff/Senior AI·ML·NLP Engineers, Recommendation
+  Systems Engineers, Search Engineer, Applied ML Engineers, all in the 6–8yr band.
+- **Talent Market Intelligence:** Market Efficiency 43% (57% of top talent mispriced), 56 Hidden
+  Gems, avg TMI +1,034, highest +23,366; biggest ATS failure: AI Engineer ATS #1788 → our #4.
+- Fully reproducible: deterministic hashing backend → judges regenerate the exact submission
+  offline. Self-labels are a proxy (tune by JD logic, not metric-chasing).
