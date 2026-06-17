@@ -17,11 +17,11 @@ quantifies the information asymmetry between what a résumé *says* (keywords, t
 Then the dashboard — the whole thesis in one screen:
 
 ```
-              TALENT MARKET INTELLIGENCE
-   ATS Market Efficiency      8%   (92% of top talent mispriced)
-   Hidden Gems Found          85
-   Average Mispricing (TMI)   +582
-   Highest Mispricing (TMI)   +1803
+              TALENT MARKET INTELLIGENCE   (full 100,000-candidate pool)
+   ATS Market Efficiency      43%   (57% of top talent mispriced)
+   Hidden Gems Found          56
+   Average Mispricing (TMI)   +1,034
+   Highest Mispricing (TMI)   +23,366
 ```
 
 `python scripts/market_dashboard.py --submission submission.csv --json eval/dashboard.json`
@@ -31,18 +31,17 @@ emits this plus a frontend-ready payload (hero, cards, ATS-vs-us, stuffer counts
 
 ## Open with a failure (the killer demo)
 
-**Slide 1 — Traditional ATS rank #552.**
-An "ML Engineer." Only **1** of the JD's keywords in their skills list. Any keyword/similarity
-ranker buries them near the bottom.
+**Slide 1 — Traditional ATS rank #1788.**
+An "AI Engineer." A similarity ranker buries them ~1,800 deep, well out of anyone's review.
 
-**Slide 2 — Our rank #19. Conviction 87%. Talent Mispricing Index +533.**
-*Undervalued by 533 ranking positions.*
+**Slide 2 — Our rank #4. Talent Mispricing Index +1,784.**
+*Undervalued by 1,784 ranking positions.*
 
-**Slide 3 — Why the ATS failed.** Only 1 buzzword, **but**:
-- ✓ Built production recommendation systems (career text, not keywords)
+**Slide 3 — Why the ATS failed.** Their text doesn't keyword-match the JD, **but**:
+- ✓ Built production recommendation systems + feature pipelines (career text, not keywords)
 - ✓ Career trajectory heading straight at search/ranking roles
 - ✓ Product-company ML experience at scale
-- ✓ Assessment-corroborated skills (81/100)
+- ✓ Assessment-corroborated skills
 
 The panel now *feels* the problem: keyword search can't see real talent.
 
@@ -71,7 +70,7 @@ Fit × Conviction, bubble size = mispricing. Four quadrants:
 - **Promising but Uncertain** (route to manual review)
 - **Ignore**
 
-On our validation sample, **85 of the top 100 are Hidden Gems** the ATS ranked past #100.
+On the full 100K pool, **56 of the top 100 are Hidden Gems** the ATS buried — and the most underpriced is mispriced by +23,366 positions.
 
 ---
 
@@ -79,7 +78,7 @@ On our validation sample, **85 of the top 100 are Hidden Gems** the ATS ranked p
 
 - **Trap-resistant by design.** The dataset is engineered with honeypots and keyword-stuffers
   that auto-disqualify naive rankers. Ours: **0 honeypots, 0 stuffers** in the danger zones; a
-  naive embedding baseline pulls in 13 stuffers + 2 honeypots.
+  naive embedding baseline pulls in 9 stuffers + 3 honeypots (full pool).
 - **We validated against independent human judgment** (not just our own labels): ranking order
   tracks it, **zero strong fits missed**, controls rate ~0.
 - **Reproducible & deterministic.** CPU-only, network-free ranking, offline embeddings,
@@ -93,11 +92,11 @@ A judge should grasp the whole idea in under 20 seconds, without reading a techn
 
 | Time | Screen | Shows |
 |---|---|---|
-| 0:15 | **Hero dashboard** | Market Efficiency 8%, 85 Hidden Gems, Avg/Highest TMI → "these guys find overlooked talent" |
-| 0:30 | **The ATS failure** | ATS #552 → Our #19 → **TMI +533**, then "Why ATS missed them" |
+| 0:15 | **Hero dashboard** | Market Efficiency 43%, 56 Hidden Gems, Avg TMI +1,034 → "these guys find overlooked talent" |
+| 0:30 | **The ATS failure** | ATS #1788 → Our #4 → **TMI +1,784**, then "Why ATS missed them" |
 | 1:00 | **Conviction card** | Fit / Conviction / TMI / Evidence Density + Trust Drivers ✓ and Concerns ⚠ |
 | 0:30 | **The bet map** | every candidate in the Fit×Conviction quadrant; Hidden Gems pop |
-| 0:30 | **ATS vs us** | ATS top-10 (Marketing Manager, Ops Lead…) vs our top-10 (ML / NLP / Search Eng); 13 stuffers in ATS, 0 in ours |
+| 0:30 | **ATS vs us** | across the top-100 the ATS pulls in **9 keyword-stuffers + 3 honeypots**; ours has **0** — and buries 56 hidden gems we surface |
 
 **Do NOT put on screen** (implementation details — only if a judge asks): Qdrant, FAISS, BGE,
 embeddings, cosine similarity, sentence-transformers, Docker, XGBoost. Lead with the *mental
@@ -109,5 +108,5 @@ model*, not the stack.
 > undervaluing — and we can prove, candidate by candidate, exactly why traditional hiring
 > missed them.
 
-*(Numbers above are from the validation sample; regenerate on the full 100K before the final
-deck: `python scripts/conviction_demo.py` and `python scripts/discovery_gap.py`.)*
+*(All numbers above are from the full 100,000-candidate pool. Regenerate any time with
+`python scripts/market_dashboard.py --submission submission.csv` and `scripts/discovery_gap.py`.)*
