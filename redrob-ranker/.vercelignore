@@ -1,0 +1,15 @@
+# Keep the Vercel upload lean. Do NOT ignore src/ or data/ — the API function
+# bundles them via includeFiles in vercel.json.
+.git
+models/
+artifacts/
+out/
+*.zip
+**/__pycache__/
+*.pyc
+frontend/node_modules/
+frontend/dist/
+eval/*.parquet
+eval/review_*.csv
+submission*.csv
+tests/

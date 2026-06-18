@@ -1,0 +1,15 @@
+# Keep the Vercel upload lean. Do NOT ignore redrob-ranker/{src,data,eval} —
+# the API function bundles them via includeFiles in vercel.json.
+.git
+*.zip
+redrob-ranker/models/
+redrob-ranker/artifacts/
+redrob-ranker/out/
+redrob-ranker/tests/
+redrob-ranker/frontend/node_modules/
+redrob-ranker/frontend/dist/
+redrob-ranker/eval/*.parquet
+redrob-ranker/eval/review_*.csv
+**/__pycache__/
+*.pyc
+submission*.csv

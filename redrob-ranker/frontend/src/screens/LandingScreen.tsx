@@ -301,7 +301,7 @@ export default function LandingScreen({ onDemo, onUpload }: Props) {
            transition={{ duration: 1, delay: 0.8 }}
            className="mt-8"
         >
-          <button 
+          <button
             onClick={onDemo}
             className="flex items-center gap-3 text-sm font-medium tracking-wide text-slate-500 hover:text-white transition-colors duration-300"
           >
@@ -310,6 +310,13 @@ export default function LandingScreen({ onDemo, onUpload }: Props) {
               <Play className="w-2.5 h-2.5 ml-0.5" />
             </div>
           </button>
+          <a
+            href="/sample_candidates.jsonl"
+            download
+            className="block mt-4 text-xs font-medium tracking-wide text-slate-600 hover:text-cyan-400 transition-colors duration-300"
+          >
+            Don't have a file? Download a sample pool to upload →
+          </a>
         </motion.div>
 
         {/* Premium Proof Strip */}
