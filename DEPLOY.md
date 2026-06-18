@@ -75,6 +75,21 @@ uvicorn scripts.api:app --port 8000
 cd redrob-ranker/frontend && npm install && npm run dev   # http://localhost:3000
 ```
 
+## Ranking accuracy (which embedder runs)
+Live `/rank` uses an embedding backend chosen by `REDROB_EMBED_BACKEND`:
+- **`hashing`** (default) — fast, self-contained, numpy-only. Used on Vercel. Trap
+  detection (stuffers, honeypots, title-veto, evidence) is fully active; pure semantic
+  relevance is approximate.
+- **`auto` / `bge`** — the semantic model (BAAI/bge-small-en-v1.5) that matches the
+  validated offline pipeline. Needs `torch` + `sentence-transformers` (too heavy for a
+  Vercel function), so use it on the Docker/Render build:
+  ```bash
+  docker build -f redrob-ranker/Dockerfile.web \
+    --build-arg ACCURATE=true --build-arg EMBED_BACKEND=auto -t discovery-web redrob-ranker
+  ```
+The most accurate, instant story is always the precomputed **/demo** (full 100K with BGE).
+See [`RESPONSIBLE_AI.md`](RESPONSIBLE_AI.md) for explainability and fairness posture.
+
 ## Other hosts
 Prefer a long-running container (no 4.5 MB upload cap, large `/rank` works)? Use
 [`redrob-ranker/Dockerfile.web`](redrob-ranker/Dockerfile.web) — FastAPI serves

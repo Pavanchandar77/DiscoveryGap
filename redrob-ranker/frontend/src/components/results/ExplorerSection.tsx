@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ChevronDown, ChevronUp } from 'lucide-react';
-import { DashboardData } from '../../types';
+import { Search, ChevronDown, ChevronUp, FileSearch } from 'lucide-react';
+import { Candidate, DashboardData } from '../../types';
 import { formatTmi } from '../../lib/utils';
 
-export default function ExplorerSection({ data }: { data: DashboardData }) {
+export default function ExplorerSection({ data, onInspect }: { data: DashboardData; onInspect?: (c: Candidate) => void }) {
   const [query, setQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -158,8 +158,18 @@ export default function ExplorerSection({ data }: { data: DashboardData }) {
                               ))}
                               {c.concerns.length === 0 && <span className="text-slate-500 italic font-light">No red flags flagged.</span>}
                             </ul>
+
+                            {onInspect && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onInspect(c); }}
+                                className="mt-8 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400 hover:text-cyan-400 transition-colors"
+                              >
+                                <FileSearch className="w-3.5 h-3.5" />
+                                Open full audit
+                              </button>
+                            )}
                           </div>
-                          
+
                        </div>
                      </motion.div>
                    )}

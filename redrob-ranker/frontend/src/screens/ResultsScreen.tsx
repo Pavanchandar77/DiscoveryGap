@@ -1,22 +1,22 @@
-import React, { useEffect } from 'react';
-import { DashboardData } from '../types';
+import React, { useEffect, useState } from 'react';
+import { Candidate, DashboardData } from '../types';
 import RevealSection from '../components/results/RevealSection';
 import InsightsSection from '../components/results/InsightsSection';
 import TalentMapSection from '../components/results/TalentMapSection';
 import HiddenGemsSection from '../components/results/HiddenGemsSection';
 import ComparisonSection from '../components/results/ComparisonSection';
 import ExplorerSection from '../components/results/ExplorerSection';
+import ResponsibleAISection from '../components/results/ResponsibleAISection';
 import DownloadSection from '../components/results/DownloadSection';
+import CandidateModal from '../components/CandidateModal';
+import Footer from '../components/Footer';
 import { buildSubmissionCsv, downloadCsv } from '../lib/csv';
 import { motion, useScroll, useSpring } from 'framer-motion';
 
 export default function ResultsScreen({ data, onExit }: { data: DashboardData, onExit: () => void }) {
   const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
+  const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+  const [selected, setSelected] = useState<Candidate | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -29,7 +29,7 @@ export default function ResultsScreen({ data, onExit }: { data: DashboardData, o
         className="fixed top-0 left-0 right-0 h-0.5 bg-white origin-left z-50"
         style={{ scaleX }}
       />
-      
+
       {/* Sticky Header */}
       <header className="fixed top-0 inset-x-0 h-20 z-40 flex items-center justify-between px-6 lg:px-12 pointer-events-none mix-blend-exclusion text-white">
         <div className="font-semibold tracking-widest text-xs uppercase pointer-events-auto">
@@ -49,14 +49,19 @@ export default function ResultsScreen({ data, onExit }: { data: DashboardData, o
       </header>
 
       <main className="flex flex-col">
-        <RevealSection hero={data.hero} />
+        <RevealSection hero={data.hero} onInspect={setSelected} />
         <InsightsSection data={data} />
         <TalentMapSection data={data} />
-        <HiddenGemsSection data={data} />
+        <HiddenGemsSection data={data} onInspect={setSelected} />
         <ComparisonSection data={data} />
-        <ExplorerSection data={data} />
+        <ExplorerSection data={data} onInspect={setSelected} />
+        <ResponsibleAISection />
         <DownloadSection data={data} />
       </main>
+
+      <Footer />
+
+      <CandidateModal candidate={selected} onClose={() => setSelected(null)} />
     </div>
   )
 }

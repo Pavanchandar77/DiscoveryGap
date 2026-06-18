@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Candidate } from '../../types';
 import { formatInt } from '../../lib/utils';
 
-export default function RevealSection({ hero }: { hero?: Candidate }) {
+export default function RevealSection({ hero, onInspect }: { hero?: Candidate; onInspect?: (c: Candidate) => void }) {
   const [phase, setPhase] = useState<'scan' | 'isolate' | 'reveal'>('scan');
 
   useEffect(() => {
@@ -213,6 +213,18 @@ export default function RevealSection({ hero }: { hero?: Candidate }) {
                     Talent Mispricing Index of <span className="text-white font-medium">{formatInt(hero.tmi)}</span> — the positions the ATS buried this candidate by.
                  </div>
                </motion.div>
+
+               {onInspect && phase === 'reveal' && (
+                 <motion.button
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   transition={{ delay: 2.4 }}
+                   onClick={() => onInspect(hero)}
+                   className="mt-10 self-center md:self-start inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/15 text-xs font-semibold uppercase tracking-widest text-slate-300 hover:text-white hover:border-white/30 transition-colors"
+                 >
+                   Why this ranking
+                 </motion.button>
+               )}
             </div>
           </div>
         </motion.div>

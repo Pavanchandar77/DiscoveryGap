@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { DashboardData } from '../../types';
+import { FileSearch } from 'lucide-react';
+import { Candidate, DashboardData } from '../../types';
 import { formatTmi } from '../../lib/utils';
 
-export default function HiddenGemsSection({ data }: { data: DashboardData }) {
+export default function HiddenGemsSection({ data, onInspect }: { data: DashboardData; onInspect?: (c: Candidate) => void }) {
   const gems = [...data.cards]
     .sort((a, b) => b.tmi - a.tmi)
     .slice(0, 4);
@@ -105,6 +106,16 @@ export default function HiddenGemsSection({ data }: { data: DashboardData }) {
                   </ul>
                 </div>
              </div>
+
+             {onInspect && (
+               <button
+                 onClick={() => onInspect(gem)}
+                 className="relative z-10 mt-10 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400 hover:text-cyan-400 transition-colors"
+               >
+                 <FileSearch className="w-3.5 h-3.5" />
+                 Why this ranking
+               </button>
+             )}
           </motion.div>
         ))}
       </div>

@@ -5,6 +5,12 @@
 #   docker run --rm -p 8000:8000 discovery-web
 #   open http://localhost:8000        # dashboard + /demo + /rank
 #
+# Accuracy: by default live /rank uses the fast, self-contained numpy "hashing"
+# embedder. For semantic accuracy that matches the validated offline pipeline,
+# build with the BGE backend (adds torch + sentence-transformers, larger image,
+# downloads the model on first use):
+#   docker build -f Dockerfile.web --build-arg ACCURATE=true --build-arg EMBED_BACKEND=auto -t discovery-web .
+#
 # (The batch reproduce step still uses the plain ./Dockerfile + rank.py.)
 
 # ---------- Stage 1: build the frontend ----------
@@ -23,6 +29,18 @@ WORKDIR /app
 RUN pip install --no-cache-dir \
     numpy==2.4.6 pandas==3.0.3 pyarrow==24.0.0 \
     "fastapi>=0.115" "uvicorn[standard]>=0.30" "python-multipart>=0.0.9"
+
+# Optional semantic backend (CPU torch + sentence-transformers) for accurate
+# live ranking. Off by default to keep the image lean.
+ARG ACCURATE=false
+RUN if [ "$ACCURATE" = "true" ]; then \
+      pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+      pip install --no-cache-dir sentence-transformers ; \
+    fi
+
+# Embedding backend: "hashing" (default, numpy-only) | "auto" | "bge".
+ARG EMBED_BACKEND=hashing
+ENV REDROB_EMBED_BACKEND=${EMBED_BACKEND}
 
 # Backend source + precomputed artifacts (frontend/node_modules & dist are
 # excluded via .dockerignore; the built dist is copied from stage 1 below).
