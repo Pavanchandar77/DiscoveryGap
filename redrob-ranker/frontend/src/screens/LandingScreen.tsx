@@ -319,6 +319,22 @@ export default function LandingScreen({ onDemo, onUpload }: Props) {
           </a>
         </motion.div>
 
+        {/* Trust line — explainable, human-in-the-loop posture up front */}
+        <motion.div
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           transition={{ duration: 1, delay: 1.1 }}
+           className="mt-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600"
+        >
+          <span>Explainable</span>
+          <span className="text-slate-700">·</span>
+          <span>Human-in-the-loop</span>
+          <span className="text-slate-700">·</span>
+          <span>No protected attributes</span>
+          <span className="text-slate-700">·</span>
+          <span>Audit trail on every candidate</span>
+        </motion.div>
+
         {/* Premium Proof Strip */}
         <motion.div
            initial={{ opacity: 0, y: 30 }}
