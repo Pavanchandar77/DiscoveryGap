@@ -1,0 +1,6 @@
+# Deps for the repo-root Vercel API function (api/index.py) ONLY.
+# Minimal so the function stays well under Vercel's size limit: the engine is
+# numpy-only at request time (no torch / pandas / pyarrow needed for /rank).
+fastapi==0.117.1
+numpy==2.4.6
+python-multipart==0.0.20
