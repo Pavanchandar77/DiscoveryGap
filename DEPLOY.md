@@ -39,6 +39,10 @@ If you'd rather scope the project to the engine folder, set **Root Directory =
 - **Upload**: runs the **real ranking engine** on your file. Vercel caps request
   bodies at **~4.5 MB**, so use a small/medium sample here. The full-100K story is
   the demo view.
+- **Try-it sample**: the landing page links a ready 654-candidate pool
+  (`/sample_candidates.jsonl`, ~1.2 MB) so anyone can test the upload immediately —
+  it ranks to 57% mispriced / 43% efficiency, 0 stuffers in our top, honeypots
+  removed. Regenerate with `python redrob-ranker/scripts/make_sample_candidates.py`.
 
 ## Env vars
 None required — the frontend calls the API on relative, same-origin URLs.
