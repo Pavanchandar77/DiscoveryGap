@@ -16,9 +16,10 @@ interface Props {
   file: File | null;
   setData: (data: DashboardData) => void;
   onComplete: () => void;
+  onError: (message: string) => void;
 }
 
-export default function ProcessingScreen({ file, setData, onComplete }: Props) {
+export default function ProcessingScreen({ file, setData, onComplete, onError }: Props) {
   const [currentStep, setCurrentStep] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -124,29 +125,30 @@ export default function ProcessingScreen({ file, setData, onComplete }: Props) {
       });
     }, intervalTime);
     
+    let cancelled = false;
+    const started = Date.now();
+
     const fetchData = async () => {
       try {
-        let result: DashboardData;
-        if (file) {
-           result = await uploadCandidatesAndRank(file);
-        } else {
-           result = await fetchDemoDashboard();
-        }
+        const result = file
+          ? await uploadCandidatesAndRank(file)
+          : await fetchDemoDashboard();
+        if (cancelled) return;
         setData(result);
-        
-        setTimeout(() => {
-           onComplete();
-        }, totalTime + 500); 
-
+        // Let the cinematic sequence finish, but never cut it short.
+        const elapsed = Date.now() - started;
+        setTimeout(() => { if (!cancelled) onComplete(); }, Math.max(500, totalTime - elapsed + 500));
       } catch (e) {
-        console.error(e);
+        if (cancelled) return;
+        const msg = e instanceof Error && e.message ? e.message : "Something went wrong while ranking.";
+        onError(msg);
       }
     };
-    
+
     fetchData();
 
-    return () => clearInterval(interval);
-  }, [file, setData, onComplete]);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [file, setData, onComplete, onError]);
 
   return (
     <div className="fixed inset-0 bg-[#050505] flex flex-col items-center justify-center z-50 overflow-hidden font-sans">
