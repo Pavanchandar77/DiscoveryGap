@@ -11,16 +11,73 @@ from . import config as C
 from .schema import Candidate
 
 
+def _calculate_overlap_adjusted_history_months(cand: Candidate) -> int:
+    from datetime import datetime
+    today_dt = datetime.strptime(C.TODAY, "%Y-%m-%d").date()
+    
+    roles = []
+    for h in cand.history:
+        dur = int(h.get("duration_months") or 0)
+        sd_str = h.get("start_date")
+        ed_str = h.get("end_date")
+        
+        if not sd_str:
+            roles.append({"dur": dur, "interval": None})
+            continue
+            
+        try:
+            sd = datetime.strptime(sd_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            roles.append({"dur": dur, "interval": None})
+            continue
+            
+        if not ed_str:
+            ed = today_dt
+        else:
+            try:
+                ed = datetime.strptime(ed_str, "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                ed = today_dt
+                
+        if sd > ed:
+            sd, ed = ed, sd
+        roles.append({"dur": dur, "interval": (sd, ed)})
+        
+    valid_roles = [r for r in roles if r["interval"] is not None]
+    if not valid_roles:
+        return cand.total_history_months
+        
+    total_declared = sum(r["dur"] for r in roles)
+    valid_roles.sort(key=lambda x: x["interval"][0])
+    
+    adjust = 0
+    for i in range(len(valid_roles)):
+        for j in range(i + 1, len(valid_roles)):
+            r1 = valid_roles[i]
+            r2 = valid_roles[j]
+            s1, e1 = r1["interval"]
+            s2, e2 = r2["interval"]
+            
+            os = max(s1, s2)
+            oe = min(e1, e2)
+            if os < oe:
+                overlap_months = (oe.year - os.year) * 12 + (oe.month - os.month)
+                if overlap_months > 0:
+                    adjust += min(overlap_months, r1["dur"], r2["dur"])
+                    
+    return max(0, total_declared - adjust)
+
+
 def detect(cand: Candidate) -> tuple[bool, list[str]]:
     reasons: list[str] = []
     yoe = cand.years_experience
     yoe_months = yoe * 12.0
 
-    # 1. Sum of role durations far exceeds stated years of experience (beyond overlap slack).
-    total = cand.total_history_months
+    # 1. Overlap-adjusted role durations far exceed stated years of experience (beyond overlap slack).
+    total = _calculate_overlap_adjusted_history_months(cand)
     if total > yoe_months + C.TENURE_SLACK_MONTHS:
         reasons.append(
-            f"role durations sum to {total}mo but only {yoe:.1f}yrs experience claimed"
+            f"role durations span {total}mo but only {yoe:.1f}yrs experience claimed"
         )
 
     # 2. A single skill used IMPOSSIBLY longer than the entire career. Legit profiles show a
@@ -75,5 +132,14 @@ def detect(cand: Candidate) -> tuple[bool, list[str]]:
         if sy and ey and int(ey) < int(sy):
             reasons.append(f"education end_year {ey} before start_year {sy}")
             break
+
+    # 7. Implausibly high assessment scores for career length. A 2-year engineer rarely
+    #    masters 5+ domains at 90+/100 — this pattern is a honeypot fabrication signal.
+    assess = cand.signals.get("skill_assessment_scores", {}) or {}
+    high_scores = [v for v in assess.values() if v >= 90]
+    if len(high_scores) >= 5 and yoe < 3.0:
+        reasons.append(
+            f"{len(high_scores)} skills scored 90+ but only {yoe:.1f}yrs experience"
+        )
 
     return (len(reasons) > 0, reasons)

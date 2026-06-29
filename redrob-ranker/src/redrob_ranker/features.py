@@ -29,7 +29,8 @@ def capability(cand: Candidate, semantic: float) -> tuple[float, dict]:
 
     # Corroborate CLAIMED JD-relevant skills with their assessment scores; flag bluffs
     # (advanced/expert claim on a JD skill with a low assessment = an unproven claim).
-    claimed_assess, dur_evid, bluffs = [], [], 0
+    # Core-skill bluffs (retrieval, ranking, embeddings, etc.) are penalized 2x harder.
+    claimed_assess, dur_evid, bluffs, core_bluffs, bluff_details = [], [], 0, 0, []
     for sk in cand.skills:
         nm_raw = (sk.get("name") or "").lower()
         canon = canon_skill(sk.get("name", ""))
@@ -42,6 +43,9 @@ def capability(cand: Candidate, semantic: float) -> tuple[float, dict]:
                 claimed_assess.append(a / 100.0)
                 if sk.get("proficiency") in ("advanced", "expert") and a < 40:
                     bluffs += 1
+                    if canon in core:
+                        core_bluffs += 1
+                        bluff_details.append(f"{sk.get('name')} ({sk.get('proficiency')}, assess={a})")
     if claimed_assess:
         corroboration = float(np.mean(claimed_assess))          # assessment of the claimed JD skills
     elif assess:
@@ -60,7 +64,9 @@ def capability(cand: Candidate, semantic: float) -> tuple[float, dict]:
 
     evidence = (0.40 * corroboration + 0.25 * ev_dur +
                 0.25 * prod_scale + 0.10 * validation)
-    evidence *= (1.0 - 0.15 * min(bluffs, 3))   # discount unproven (bluffed) JD-skill claims
+    # Core-skill bluffs get 2x weight; nice-to-have bluffs get 1x
+    effective_bluffs = core_bluffs * 2 + (bluffs - core_bluffs)
+    evidence *= (1.0 - 0.12 * min(effective_bluffs, 5))   # steeper discount for core-skill bluffs
 
     sem = max(0.0, semantic)  # cosine can be slightly negative; floor at 0
     score = (C.W_CAP_SKILL * skill_score +
@@ -70,6 +76,7 @@ def capability(cand: Candidate, semantic: float) -> tuple[float, dict]:
         "core_hit": sorted(core_hit), "nice_hit": sorted(nice_hit),
         "semantic": round(sem, 3), "evidence": round(evidence, 3),
         "corroboration": round(corroboration, 3), "bluffs": bluffs,
+        "core_bluffs": core_bluffs, "bluff_details": bluff_details,
         "prod_scale": round(prod_scale, 3),
     }
 

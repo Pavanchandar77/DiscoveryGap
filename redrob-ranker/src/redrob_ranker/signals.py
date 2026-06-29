@@ -42,7 +42,7 @@ def availability(cand: Candidate) -> tuple[float, list[str]]:
         reasons.append(f"low recruiter response rate ({rr:.2f})")
 
     # open to work
-    parts["open_to_work"] = 1.0 if s.get("open_to_work_flag") else 0.4
+    parts["open_to_work"] = 1.0 if s.get("open_to_work_flag") else 0.65
     if not s.get("open_to_work_flag"):
         reasons.append("not marked open to work")
 

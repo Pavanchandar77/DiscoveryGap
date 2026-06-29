@@ -139,6 +139,13 @@ SKILL_ALIAS_SEED = {
     "learning to rank": "learning to rank", "ltr": "learning to rank",
     "natural language processing": "nlp", "nlp": "nlp",
     "gcp": "gcp", "aws": "aws", "azure": "azure",
+    "ab testing": "a/b testing", "a/b test": "a/b testing", "split testing": "a/b testing", "a/b testing": "a/b testing",
+    "machine learning": "machine learning", "ml": "machine learning",
+    "deep learning": "deep learning", "dl": "deep learning", "ann": "deep learning", "neural networks": "deep learning",
+    "llms": "llm", "llm": "llm", "large language models": "llm", "large language model": "llm",
+    "transformers": "transformers", "transformer": "transformers",
+    "sql": "sql", "structured query language": "sql",
+    "stats": "statistics", "statistics": "statistics", "statistical analysis": "statistics",
 }
 
 # ---------------------------------------------------------------------------
@@ -161,9 +168,17 @@ TRANSFER_CREDIT = 0.6   # fraction of a direct match awarded for an adjacent ski
 # ---------------------------------------------------------------------------
 CONSULTING_FIRMS = [
     "tcs", "tata consultancy", "infosys", "wipro", "accenture", "cognizant",
-    "capgemini", "hcl", "tech mahindra", "mindtree",  # mindtree = product-adjacent but services-heavy
+    "capgemini", "hcl", "tech mahindra", "mindtree",
+    "deloitte", "kpmg", "pwc", "pricewaterhousecoopers", "mphasis", "virtusa",
+    "lti", "l&t infotech", "lnt infotech", "syntel", "ust global", "ernst & young",
+    "ernst and young"
 ]
-PRODUCT_INDUSTRIES = ["software", "fintech", "e-commerce", "edtech", "food delivery"]
+PRODUCT_INDUSTRIES = [
+    "software", "fintech", "e-commerce", "edtech", "food delivery",
+    "internet", "technology", "information technology", "social media",
+    "e-learning", "computer software", "saas", "artificial intelligence",
+    "ai", "deeptech", "telecommunications"
+]
 
 # Company-size -> "scale" weight (the JD wants 'shipped at a product company AT SCALE').
 COMPANY_SIZE_SCALE = {

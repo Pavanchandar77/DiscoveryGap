@@ -114,11 +114,13 @@ def quadrant(conviction: float, ats_rank: int | None, in_top: bool,
 
 def card(cand: Candidate, scored: dict, our_rank: int, ats_rank: int | None,
          ats_cutoff: int = 100, in_top: bool = True) -> dict:
+    from .counterfactual import counterfactual as cf
     fit = scored["rscore"] if "rscore" in scored else scored["score"]
     conviction = scored.get("confidence", 0.0)
     # Talent Mispricing Index: how many ranking positions the ATS undervalues them by.
     tmi = (ats_rank - our_rank) if ats_rank is not None else None
     verified, claimed, density = evidence_density(cand)
+    cf_text = cf(cand, scored, our_rank)
     return {
         "candidate_id": cand.id, "title": cand.title,
         "fit": round(100 * fit), "conviction": round(100 * conviction),
@@ -127,4 +129,5 @@ def card(cand: Candidate, scored: dict, our_rank: int, ats_rank: int | None,
         "quadrant": quadrant(conviction, ats_rank, in_top=in_top, ats_cutoff=ats_cutoff),
         "trust_drivers": trust_drivers(cand, scored),
         "concerns": concerns(cand, scored),
+        "counterfactual": cf_text,
     }

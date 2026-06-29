@@ -47,3 +47,40 @@ def confidence(cand: Candidate, scored: dict) -> tuple[float, dict]:
         "consistency": round(consistency, 2), "completeness": round(completeness, 2),
         "verified": round(verified, 2),
     }
+
+
+def rank_stability_label(score: float, buckets: dict, title_gate: float) -> str:
+    """Assess how stable this candidate's ranking is under weight perturbations.
+    
+    Computes the score under 3 perturbed weight configurations (±15%). If the
+    coefficient of variation is small, the rank is stable; otherwise fragile.
+    Returns 'Stable', 'Moderate', or 'Fragile'.
+    """
+    cap = buckets.get("capability", 0.5)
+    grw = buckets.get("growth", 0.5)
+    adp = buckets.get("adaptability", 0.5)
+    
+    # 3 perturbation vectors: emphasize each bucket in turn
+    perturbations = [
+        (0.65, 0.15, 0.20),  # capability-heavy
+        (0.45, 0.35, 0.20),  # growth-heavy
+        (0.45, 0.15, 0.40),  # adaptability-heavy
+    ]
+    
+    scores = []
+    for w_c, w_g, w_a in perturbations:
+        base = w_c * cap + w_g * grw + w_a * adp
+        scores.append(base * title_gate)
+    
+    mean_s = sum(scores) / len(scores)
+    if mean_s == 0:
+        return "Fragile"
+    variance = sum((s - mean_s) ** 2 for s in scores) / len(scores)
+    cv = (variance ** 0.5) / mean_s  # coefficient of variation
+    
+    if cv < 0.05:
+        return "Stable"
+    elif cv < 0.12:
+        return "Moderate"
+    else:
+        return "Fragile"

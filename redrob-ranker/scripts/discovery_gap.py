@@ -99,7 +99,8 @@ mispriced talent in our top-20, biggest first:
     md = "\n".join(lines)
     out = ROOT / "eval" / "discovery_gap.md"
     out.write_text(md, encoding="utf-8")
-    print(md[:1500]); print("...\nwrote", out)
+    safe_md = md[:1500].encode(sys.stdout.encoding or 'utf-8', errors='replace').decode(sys.stdout.encoding or 'utf-8')
+    print(safe_md); print("...\nwrote", out)
 
 
 if __name__ == "__main__":

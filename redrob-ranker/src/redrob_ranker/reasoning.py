@@ -3,74 +3,44 @@
 Engineered to the Stage-4 rubric: cites real profile facts, connects to JD requirements,
 acknowledges concerns honestly, varies across rows, tone matches rank. Every string it
 emits references fields that actually exist on the candidate.
-
-Tone is keyed to RANK POSITION within the top-100, not to the absolute score. We are
-asserting these 100 are the best of the pool, so even the tail must read as a considered
-inclusion ("lighter overlap but credited for X"), never as "filler" — while still naming
-each candidate's genuine concern honestly.
 """
 from __future__ import annotations
 from .schema import Candidate
 
-# Frames are chosen by rank band and rotated by index so sampled rows read differently.
-_STRONG = [  # ranks ~1-15: the clear matches
-    "Strong fit: {title}, {yrs} yrs, demonstrated {skills}{concern}.",
-    "{yrs}-yr {title}; core ranking/retrieval fit via {skills}{concern}.",
-    "Top match: {title} with {yrs} yrs, {skills}{concern}.",
-]
-_MID = [  # ranks ~16-55: solid, partial
-    "{title} with {yrs} yrs; solid on {skills}{concern}.",
-    "{yrs}-yr {title}; relevant strengths in {skills}{concern}.",
-    "Reasonable fit: {title}, {yrs} yrs, {skills}{concern}.",
-]
-_TAIL = [  # ranks ~56-100: weaker but a considered inclusion, never "filler"
-    "{title} with {yrs} yrs; rounds out the shortlist on {skills}{concern}.",
-    "{yrs}-yr {title}; lighter JD overlap, credited for {skills}{concern}.",
-    "Shortlisted: {title}, {yrs} yrs, partial match on {skills}{concern}.",
-]
-
-
-def _skills_phrase(cand: Candidate, info: dict) -> str:
-    """2 concrete skills to cite. Prefer JD-matched skills, then plain-language system
-    evidence, then the candidate's own real skill names. Never invents a skill."""
-    cap = info.get("capability", {})
-    hits = (cap.get("core_hit") or []) + (cap.get("nice_hit") or [])
-    pl = info.get("adaptability", {}).get("plainlang_hits") or []
-    picked = hits[:2] or pl[:2]
-    if not picked:
-        picked = [sk.get("name") for sk in cand.skills if sk.get("name")][:2]
-    return ", ".join(picked) if picked else "its career history"
-
-
-def _concern_phrase(cand: Candidate, info: dict) -> str:
-    auth = info.get("authenticity", {})
-    reasons = []
-    reasons += auth.get("dq_reasons", [])
-    reasons += auth.get("avail_reasons", [])
-    np_days = cand.signals.get("notice_period_days")
-    if np_days and np_days > 30:
-        reasons.append(f"{np_days}-day notice")
-    if not reasons:
-        return ""
-    return "; concern: " + reasons[0]
-
 
 def make(cand: Candidate, scored: dict, rank: int) -> str:
-    info = scored["info"]
-    yrs = f"{cand.years_experience:.1f}"
+    from . import presentation
+    drivers = presentation.trust_drivers(cand, scored)
+    cons = presentation.concerns(cand, scored)
+    cap = scored["info"]["capability"]
+    
+    yrs = f"{cand.years_experience:.1f}y"
     title = cand.title or "Candidate"
-    skills = _skills_phrase(cand, info)
-    concern = _concern_phrase(cand, info)
-
-    # Tone band by rank position within the submitted top-100 (not absolute score).
+    conv = round(100 * scored.get("confidence", 0.0))
+    
+    # Evidence density
+    verified, claimed, density = presentation.evidence_density(cand)
+    ev_str = f"Evidence: {verified}/{claimed} skills verified ({round(100*density)}%)"
+    
+    # Core bluff warnings (Stage-4 rubric: acknowledge concerns honestly)
+    bluff_str = ""
+    bluff_details = cap.get("bluff_details", [])
+    if bluff_details:
+        bluff_str = f" ⚠ Bluff detected: {bluff_details[0]}."
+    
+    drivers_str = "; ".join(drivers[:3]) if drivers else "Solid technical alignment"
+    concerns_str = ""
+    if cons:
+        concerns_str = f" [Concerns: {'; '.join(cons[:2])}]"
+    
+    # Vary structure by rank cohort
     if rank <= 15:
-        frames = _STRONG
+        prefix = f"EXECUTIVE SHORTLIST #{rank}"
     elif rank <= 55:
-        frames = _MID
+        prefix = f"STRONG FIT #{rank}"
     else:
-        frames = _TAIL
-    frame = frames[rank % len(frames)]
-
-    text = frame.format(title=title, yrs=yrs, skills=skills, concern=concern)
-    # keep it 1-2 sentences, CSV-safe (no stray newlines)
-    return " ".join(text.split())[:300]
+        prefix = f"SHORTLISTED #{rank}"
+        
+    text = (f"{prefix} | {title}, {yrs}, Conv {conv}% | "
+            f"{ev_str} | {drivers_str}.{bluff_str}{concerns_str}")
+    return text[:300]

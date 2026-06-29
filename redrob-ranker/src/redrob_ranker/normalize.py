@@ -60,6 +60,8 @@ def career_title_levels(cand: Candidate) -> list[int]:
 
 def is_consulting_company(name: str) -> bool:
     n = (name or "").lower()
+    if n == "ey" or n.startswith("ey ") or n.endswith(" ey") or " ey " in n:
+        return True
     return any(f in n for f in C.CONSULTING_FIRMS)
 
 

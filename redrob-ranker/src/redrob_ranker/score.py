@@ -12,7 +12,7 @@ from . import config as C
 from .schema import Candidate
 from .normalize import classify_title
 from . import features
-from .confidence import confidence
+from .confidence import confidence, rank_stability_label
 
 
 def title_gate(cand: Candidate, adaptability_info: dict) -> float:
@@ -22,6 +22,21 @@ def title_gate(cand: Candidate, adaptability_info: dict) -> float:
         return C.TITLE_FULL
     if klass == "trap":
         return C.TITLE_FLOOR
+
+    # Prioritize elite Data Analysts / Business Analysts / Analytics Engineers
+    t = (cand.title or "").lower()
+    if "analyst" in t or "analytics" in t:
+        skills = {s.get("name", "").lower() for s in cand.skills}
+        eval_skills = {"evaluation metrics", "a/b testing", "ndcg", "mrr", "map", "statistics"}
+        has_eval = bool(skills & eval_skills)
+        assess = cand.signals.get("skill_assessment_scores", {}) or {}
+        python_score = assess.get("Python", 0) or assess.get("python", 0) or 0
+        sql_score = assess.get("SQL", 0) or assess.get("sql", 0) or 0
+        
+        # If they possess verified evaluation skills and a strong Python/SQL assessment, raise the gate
+        if has_eval and (python_score >= 60 or sql_score >= 60 or len(skills & {"sql", "python"}) >= 2):
+            return 0.85
+
     # ambiguous (Business Analyst / Project Manager): earn the gate via real evidence
     plainlang = len(adaptability_info.get("plainlang_hits", []))
     transfer = adaptability_info.get("transfer", 0.0)
@@ -56,7 +71,16 @@ def preference_multiplier(cand: Candidate) -> tuple[float, list[str]]:
         reasons.append("not in a preferred location and not open to relocation")
 
     nd = cand.signals.get("notice_period_days")
-    notf = 1.0 if (nd is not None and nd <= C.NOTICE_PREFERRED_DAYS) else C.NOTICE_LONG_MULT
+    if nd is None:
+        notf = 1.0
+    elif nd <= 30:
+        notf = 1.0
+    elif nd <= 60:
+        notf = 0.97
+    elif nd <= 90:
+        notf = 0.94
+    else:
+        notf = 0.90
 
     mult = max(C.PREFERENCE_FLOOR, band * locf * notf)
     return mult, reasons
@@ -75,7 +99,11 @@ def score_candidate(cand: Candidate, semantic: float) -> dict:
     if is_hp:
         final = 0.0
     else:
-        final = base * tg * auth * pref
+        # Evidence density: reward candidates whose skill claims are actually verified
+        from . import presentation
+        _, _, density = presentation.evidence_density(cand)
+        density_mult = 0.85 + 0.15 * density  # range [0.85, 1.0]
+        final = base * tg * auth * pref * density_mult
 
     result = {
         "candidate_id": cand.id,
@@ -91,4 +119,5 @@ def score_candidate(cand: Candidate, semantic: float) -> dict:
     conf, conf_factors = confidence(cand, result)   # how sure are we (separate from the score)
     result["confidence"] = round(conf, 3)
     result["info"]["confidence_factors"] = conf_factors
+    result["stability"] = rank_stability_label(final, result["buckets"], tg)
     return result
