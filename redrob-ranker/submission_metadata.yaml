@@ -7,21 +7,16 @@
 # ============================================================================
 # Team identity
 # ============================================================================
-team_name: "your-team-name-here"  # Used in leaderboard and announcements
+team_name: "Discovery"  # Used in leaderboard and announcements
 
 primary_contact:
-  name: "Full Name"
-  email: "primary@example.com"   # Used for all organizer communication
-  phone: "+91-XXXXXXXXXX"        # Used for top-50 / top-10 outreach
+  name: "DV Pavan Chandar"
+  email: "pavanchandar77@gmail.com"   # Used for all organizer communication
+  phone: "+91-6383315018"        # Used for top-50 / top-10 outreach
 
 team_members:
-  - name: "Member 1 Full Name"
-    email: "member1@example.com"
-    role: "ML Engineer"          # Optional, e.g. "Team Lead", "Backend", "Data"
-  - name: "Member 2 Full Name"
-    email: "member2@example.com"
-    role: "Data Engineer"
-  # Add more members as needed; solo participants list just one member
+  - name: "DV Pavan Chandar"
+    email: "pavanchandar77@gmail.com"
 
 # ============================================================================
 # Code and reproducibility
@@ -48,8 +43,8 @@ compute:
   ram_gb: 16                                    # Available RAM in GB
   python_version: "3.11.4"                      # python --version
   os: "macOS 14.2"                              # Or "Ubuntu 22.04 LTS", etc.
-  uses_gpu_for_inference: false                 # Must be false — see compute constraints
-  has_network_during_ranking: false             # rank.py monkeypatches sockets off (compliance guard)
+  uses_gpu_for_inference: false                 # Must be false — see compute constraints (zero GPU, zero PyTorch)
+  has_network_during_ranking: false             # rank.py monkeypatches sockets off (compliance guard, zero network/HuggingFace calls)
   pre_computation_required: true                # we precompute embeddings offline (scripts/precompute.py)
   pre_computation_time_minutes: 3               # measured: full 100K, deterministic hashing backend, CPU
 
@@ -69,7 +64,7 @@ ai_usage_summary: |
   pool's distributions, and iterating on the gated scoring and reasoning generator.
   All design decisions and thresholds are human-reviewed and documented in config.py.
   Candidate data was processed only locally; no candidate records were sent to any
-  hosted LLM. The scored ranking step (rank.py) makes no network or LLM calls.
+  hosted LLM. The scored ranking step (rank.py) makes no network, LLM, or HuggingFace calls.
 
 # ============================================================================
 # Approach summary (optional but recommended)
@@ -92,7 +87,8 @@ methodology_summary: |
   lexical backend (reproducible by the judges with no model download), with BGE available as
   an optional upgrade. The ranking quality therefore rests on the structured trap-resistant
   signals, not on semantic similarity — by design (signals > models). The scored ranking step
-  is CPU-only, network-free numpy arithmetic over cached vectors. Reasoning is feature-templated
+  is CPU-only, network-free numpy arithmetic over cached vectors with absolutely zero dependency
+  on HuggingFace transformers, PyTorch, or external model hosting. Reasoning is feature-templated
   (no LLM), cites only real profile fields, and is keyed to rank.
 
 # ============================================================================

@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
 """Talent Conviction Engine — sandbox (REQUIRED 'sandbox link').
 
-Not just a ranker: for every candidate it shows three numbers an ATS never does —
-Fit (relevance), Conviction (certainty), Discovery Gap (how much keyword search underrates
-them) — plots them on a Fit×Conviction quadrant, surfaces the Hidden Gems the ATS buried, and
-explains both sides (Trust Drivers / Concerns). Emits a valid 4-column submission CSV.
-
-Runs on CPU with the deterministic offline embedding backend (no model download, no HF), so a
-HuggingFace Space boots without reaching the network. Run locally:
-  streamlit run scripts/make_sandbox_app.py
+Runs on CPU with the deterministic offline embedding backend.
+Designed to boot instantly on HuggingFace Spaces.
 """
 import sys, json, io, csv
 from pathlib import Path
@@ -16,7 +10,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 from redrob_ranker import config as C                              # noqa: E402
 from redrob_ranker.schema import Candidate                          # noqa: E402
@@ -74,7 +68,7 @@ st.caption("Fit = how relevant · Conviction = how certain · Talent Mispricing 
 
 @st.cache_data(show_spinner=False)
 def _jd_text() -> str:
-    p = C.DATA / "job_description.txt"
+    p = ROOT / "data" / "job_description.txt"
     return p.read_text(encoding="utf-8") if p.exists() else (
         "Senior AI Engineer — embeddings, retrieval, ranking, evaluation, production ML at a "
         "product company.")
