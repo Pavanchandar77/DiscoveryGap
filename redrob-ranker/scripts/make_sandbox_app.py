@@ -130,11 +130,13 @@ h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎯 Talent Conviction Engine")
-st.markdown("**Identify overlooked candidates, quantify confidence in every recommendation, "
-            "and explain exactly why traditional hiring systems missed them.**")
-st.caption("Fit = how relevant · Conviction = how certain · Talent Mispricing Index (TMI) = how much a "
-           "keyword/similarity ATS underrates them.")
+st.markdown("""
+<div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(192, 132, 252, 0.12)); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 40px; text-align: center; margin-top: 10px; margin-bottom: 30px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);">
+    <span style="background: linear-gradient(90deg, #c084fc, #6366f1); color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);">INDIA.RUNS Track 1 — Category Defining</span>
+    <h1 style="margin: 20px 0 10px 0; font-size: 3.5rem; font-weight: 800; background: linear-gradient(90deg, #c084fc, #6366f1, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.04em; font-family: 'Outfit', sans-serif;">Talent Conviction Engine</h1>
+    <p style="color: #94a3b8; font-size: 1.1rem; max-width: 700px; margin: 0 auto; line-height: 1.6; font-family: 'Outfit', sans-serif;">Identify overlooked candidates, quantify conviction, and expose why traditional ATS search systems missed them.</p>
+</div>
+""", unsafe_allow_html=True)
 
 
 @st.cache_data(show_spinner=False)
@@ -194,36 +196,105 @@ tmis = [c["tmi"] for c in cards if c["tmi"] is not None]
 eff = (sum(1 for c in cards if c["ats_rank"] and c["ats_rank"] <= n) / n) if n else 0.0
 
 # --- Screen 1: Talent Market Intelligence (hero dashboard) ---
-st.header("Talent Market Intelligence")
+st.markdown("<h2 style='font-family: \"Outfit\"; font-weight: 700; color: #f8fafc; margin-bottom: 20px;'>Talent Market Intelligence</h2>", unsafe_allow_html=True)
 m1, m2, m3, m4 = st.columns(4)
-m1.metric("ATS Market Efficiency", f"{eff:.0%}", f"-{1-eff:.0%} mispriced", delta_color="inverse")
-m2.metric("Hidden Gems Found", len(gems))
-m3.metric("Avg Mispricing (TMI)", f"{int(np.mean(tmis)):+d}" if tmis else "—")
-m4.metric("Highest TMI", f"{max(tmis):+d}" if tmis else "—")
+
+with m1:
+    st.markdown(f"""
+    <div style="background: rgba(30, 41, 59, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 18px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+        <div style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 8px;">ATS Market Efficiency</div>
+        <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #f43f5e 0%, #fda4af 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{eff:.0%}</div>
+        <div style="font-size: 0.8rem; color: #f43f5e; margin-top: 4px; font-weight: 500;">-{1-eff:.0%} mispriced</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with m2:
+    st.markdown(f"""
+    <div style="background: rgba(30, 41, 59, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 18px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+        <div style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 8px;">Hidden Gems Found</div>
+        <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #10b981 0%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{len(gems)}</div>
+        <div style="font-size: 0.8rem; color: #10b981; margin-top: 4px; font-weight: 500;">Overlooked top-tier candidates</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with m3:
+    avg_tmi_str = f"{int(np.mean(tmis)):+d}" if tmis else "—"
+    st.markdown(f"""
+    <div style="background: rgba(30, 41, 59, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 18px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+        <div style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 8px;">Avg Mispricing (TMI)</div>
+        <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #c084fc 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{avg_tmi_str}</div>
+        <div style="font-size: 0.8rem; color: #a78bfa; margin-top: 4px; font-weight: 500;">Mean rank positions saved</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with m4:
+    highest_tmi_str = f"{max(tmis):+d}" if tmis else "—"
+    st.markdown(f"""
+    <div style="background: rgba(30, 41, 59, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 18px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+        <div style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 8px;">Highest TMI</div>
+        <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #38bdf8 0%, #60a5fa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{highest_tmi_str}</div>
+        <div style="font-size: 0.8rem; color: #38bdf8; margin-top: 4px; font-weight: 500;">Max rank position saved</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- Screen 2: the single biggest ATS failure ---
 hero = max(cards[:20], key=lambda c: (c["tmi"] if c["tmi"] is not None else -1)) if cards else None
 if hero:
-    st.subheader("Why traditional hiring fails — exhibit A")
-    f1, f2, f3 = st.columns(3)
-    f1.metric("ATS Rank", f"#{hero['ats_rank']}")
-    f2.metric("Our Rank", f"#{hero['our_rank']}")
-    f3.metric("Talent Mispricing Index", f"{hero['tmi']:+d}")
-    st.markdown(f"**{hero['title']}** — " + "  ".join(f"✓ {d}" for d in hero["trust_drivers"]))
-    if hero["concerns"]:
-        st.caption("  ".join(f"⚠ {x}" for x in hero["concerns"]))
+    st.markdown("<h2 style='font-family: \"Outfit\"; font-weight: 700; color: #f8fafc; margin-top: 40px; margin-bottom: 20px;'>Why Traditional Hiring Fails — Exhibit A</h2>", unsafe_allow_html=True)
+    
+    td_spans = " ".join(f'<span style="background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-right: 8px; margin-bottom: 8px; display: inline-block;">✓ {d}</span>' for d in hero["trust_drivers"])
+    cn_spans = f'<div style="margin-top: 12px;">' + " ".join(f'<span style="background: rgba(239, 68, 68, 0.08); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.15); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-right: 8px; margin-bottom: 8px; display: inline-block;">⚠ {x}</span>' for x in hero["concerns"]) + '</div>' if hero["concerns"] else ''
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(192, 132, 252, 0.08)); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 30px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);">
+        <div style="display: flex; gap: 30px; margin-bottom: 24px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 140px; background: rgba(30, 41, 59, 0.3); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.04);">
+                <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">ATS Rank</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: #f43f5e;">#{hero['ats_rank']}</div>
+            </div>
+            <div style="flex: 1; min-width: 140px; background: rgba(30, 41, 59, 0.3); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.04);">
+                <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Engine Rank</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: #10b981;">#{hero['our_rank']}</div>
+            </div>
+            <div style="flex: 1; min-width: 140px; background: rgba(30, 41, 59, 0.3); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.04);">
+                <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Mispricing Index (TMI)</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: #a78bfa;">{hero['tmi']:+d}</div>
+            </div>
+        </div>
+        <h3 style="margin-bottom: 12px; font-size: 1.3rem; font-weight: 700; color: #f8fafc; font-family: 'Outfit';">{hero['title']}</h3>
+        <div style="margin-bottom: 16px;">
+            {td_spans}
+        </div>
+        {cn_spans}
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- Hidden gems ---
 if gems:
-    st.subheader("💎 Hidden Gems — high conviction, buried by keyword search")
+    st.markdown("<h2 style='font-family: \"Outfit\"; font-weight: 700; color: #f8fafc; margin-top: 40px; margin-bottom: 20px;'>💎 Hidden Gems — Buried by Keyword Search</h2>", unsafe_allow_html=True)
+    
     for g in gems[:3]:
-        st.markdown(f"**#{g['our_rank']} {g['title']}** — Fit **{g['fit']}**, Conviction "
-                    f"**{g['conviction']}%**, **TMI {g['tmi']:+d}** (undervalued by {g['tmi']} "
-                    f"positions vs ATS rank {g['ats_rank']}) · Evidence Density "
-                    f"{g['evidence_density']}% ({g['verified_skills']}/{g['claimed_skills']})")
-        st.markdown("  ".join(f"✓ {d}" for d in g["trust_drivers"]))
-        if g["concerns"]:
-            st.caption("  ".join(f"⚠ {x}" for x in g["concerns"]))
+        td_html = " ".join(f'<span style="background: rgba(16, 185, 129, 0.08); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.15); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-right: 8px; margin-bottom: 8px; display: inline-block;">✓ {d}</span>' for d in g["trust_drivers"])
+        cn_html = f'<div style="margin-top: 10px;">' + " ".join(f'<span style="background: rgba(239, 68, 68, 0.08); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.15); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-right: 8px; margin-bottom: 8px; display: inline-block;">⚠ {x}</span>' for x in g["concerns"]) + '</div>' if g["concerns"] else ''
+        
+        st.markdown(f"""
+        <div style="background: rgba(16, 185, 129, 0.03); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); backdrop-filter: blur(10px);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                <span style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; font-family: 'Outfit';">#{g['our_rank']} {g['title']}</span>
+                <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; border: 1px solid rgba(16, 185, 129, 0.25);">Hidden Gem</span>
+            </div>
+            <div style="display: flex; gap: 20px; margin-bottom: 18px; font-size: 0.9rem; color: #94a3b8; flex-wrap: wrap;">
+                <div>⚡ Fit: <strong style="color: #f8fafc;">{g['fit']}%</strong></div>
+                <div>🎯 Conviction: <strong style="color: #f8fafc;">{g['conviction']}%</strong></div>
+                <div>📈 TMI: <strong style="color: #34d399;">{g['tmi']:+d}</strong></div>
+                <div>📋 Evidence Density: <strong style="color: #f8fafc;">{g['evidence_density']}%</strong> ({g['verified_skills']}/{g['claimed_skills']})</div>
+            </div>
+            <div style="margin-bottom: 8px;">
+                {td_html}
+            </div>
+            {cn_html}
+        </div>
+        """, unsafe_allow_html=True)
 
 # --- Quadrant chart ---
 st.subheader("The bet map — Fit × Conviction (bubble = how badly the ATS mispriced them)")
