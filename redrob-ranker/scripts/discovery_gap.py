@@ -17,8 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from redrob_ranker import config as C                       # noqa: E402
 from redrob_ranker.schema import Candidate                   # noqa: E402
-from redrob_ranker.embed import cosine_to_jd                 # noqa: E402
+from redrob_ranker.embed import cosine_to_jd, pool_normalize  # noqa: E402
 from redrob_ranker.score import score_candidate              # noqa: E402
+from redrob_ranker.counterfactual import counterfactual as cf # noqa: E402
 
 
 def _why_missed(cand: Candidate, s: dict) -> list[str]:
@@ -53,8 +54,11 @@ def main():
 
     # Full ATS-style baseline order: pure JD-cosine over the whole pool.
     meta = pd.read_parquet(C.CAND_META)
-    sem = cosine_to_jd(np.load(C.CAND_VECS), np.load(C.JD_VEC))
-    base_df = meta.assign(sem=sem).sort_values(["sem", "candidate_id"], ascending=[False, True])
+    sem_raw = cosine_to_jd(np.load(C.CAND_VECS), np.load(C.JD_VEC))
+    sem_all = pool_normalize(sem_raw)
+    id_to_sem = dict(zip(meta["candidate_id"].tolist(), sem_all.tolist()))
+    
+    base_df = meta.assign(sem=sem_raw).sort_values(["sem", "candidate_id"], ascending=[False, True])
     base_rank = {cid: i + 1 for i, cid in enumerate(base_df["candidate_id"].tolist())}
 
     ours = [row["candidate_id"] for row in csv.DictReader(open(a.submission))]
@@ -69,10 +73,12 @@ def main():
     gems.sort(key=lambda cid: -(base_rank.get(cid, 10**9) - our_rank[cid]))   # highest TMI first
     cards = []
     for cid in gems[:8]:
-        s = score_candidate(Candidate(raws[cid]), 0.5)
+        s = score_candidate(Candidate(raws[cid]), id_to_sem.get(cid, 0.0))
         why = _why_missed(Candidate(raws[cid]), s)
         tmi = base_rank.get(cid) - our_rank[cid]
-        cards.append((cid, our_rank[cid], base_rank.get(cid), tmi, Candidate(raws[cid]).title, why))
+        cf_text = cf(Candidate(raws[cid]), s, our_rank[cid])
+        stability = s.get("stability", "Stable")
+        cards.append((cid, our_rank[cid], base_rank.get(cid), tmi, Candidate(raws[cid]).title, why, cf_text, stability))
 
     lines = [f"""# Talent Mispricing: what traditional hiring systematically gets wrong
 
@@ -89,10 +95,14 @@ The baseline is pure JD-similarity — what most ATS/keyword rankers do. It walk
 engineered traps and, worse, **buries real talent that doesn't use the buzzwords**. The most
 mispriced talent in our top-20, biggest first:
 """]
-    for cid, orank, brank, tmi, title, why in cards:
+    for cid, orank, brank, tmi, title, why, cf_text, stability in cards:
         lines.append(f"### {title} — our rank **{orank}**, ATS rank **{brank}**  ·  **TMI +{tmi}**")
-        lines.append(f"_Undervalued by {tmi} ranking positions._\n")
-        lines.append("\n".join(f"- {w}" for w in why) + "\n")
+        lines.append(f"_Undervalued by {tmi} ranking positions. Rank stability: **{stability}**._\n")
+        lines.append("\n".join(f"- {w}" for w in why))
+        if cf_text:
+            lines.append(f"- **Counterfactual Explanation:** {cf_text}\n")
+        else:
+            lines.append("")
     if not cards:
         lines.append("_(No top-20 gem was buried past ATS rank 100 in this run.)_")
 

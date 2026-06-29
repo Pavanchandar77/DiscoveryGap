@@ -148,10 +148,12 @@ st.dataframe(
 with st.expander("Why we trust each candidate (Trust Drivers & Concerns)"):
     for c in cards[:25]:
         st.markdown(f"**#{c['our_rank']} {c['title']}** · Fit {c['fit']} · "
-                    f"Conviction {c['conviction']}% · TMI {c['tmi']:+d}")
+                    f"Conviction {c['conviction']}% · TMI {c['tmi']:+d} · Stability: **{c.get('stability', 'Stable')}**")
         st.markdown("  ".join(f"✓ {d}" for d in c["trust_drivers"]) or "_—_")
         if c["concerns"]:
             st.caption("  ".join(f"⚠ {x}" for x in c["concerns"]))
+        if c.get("counterfactual"):
+            st.caption(f"💡 {c['counterfactual']}")
 
 # --- Valid 4-column submission ---
 buf = io.StringIO(); w = csv.writer(buf); w.writerow(C.SUBMISSION_HEADER)

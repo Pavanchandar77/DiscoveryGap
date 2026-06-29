@@ -130,4 +130,5 @@ def card(cand: Candidate, scored: dict, our_rank: int, ats_rank: int | None,
         "trust_drivers": trust_drivers(cand, scored),
         "concerns": concerns(cand, scored),
         "counterfactual": cf_text,
+        "stability": scored.get("stability", "Stable"),
     }

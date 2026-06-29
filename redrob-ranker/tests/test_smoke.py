@@ -48,3 +48,77 @@ def test_clean_profile_not_honeypot():
     }
     is_hp, _ = honeypot.detect(Candidate(raw))
     assert not is_hp
+
+
+def test_honeypot_fires_on_assessment_experience_contradiction():
+    """A candidate with under 3 years experience claiming 5+ expert level skills with 90+ assessments is flagged."""
+    raw = {
+        "candidate_id": "CAND_0000003",
+        "profile": {"current_title": "ML Engineer", "years_of_experience": 2.0, "summary": "", "headline": ""},
+        "career_history": [],
+        "education": [],
+        "skills": [],
+        "redrob_signals": {
+            "skill_assessment_scores": {
+                "Python": 95,
+                "SQL": 92,
+                "embeddings": 91,
+                "retrieval": 96,
+                "ranking": 90
+            }
+        }
+    }
+    is_hp, reasons = honeypot.detect(Candidate(raw))
+    assert is_hp
+    assert any("skills scored 90+" in r for r in reasons)
+
+
+def test_bluff_detector_flags_expert_with_low_assessment():
+    """Exhibiting an expert claim with low assessment triggers a bluff flag."""
+    from redrob_ranker.features import capability
+    raw = {
+        "candidate_id": "CAND_0000004",
+        "profile": {"current_title": "ML Engineer", "years_of_experience": 5.0, "summary": "", "headline": ""},
+        "career_history": [],
+        "education": [],
+        "skills": [{"name": "embeddings", "proficiency": "expert", "duration_months": 24}],
+        "redrob_signals": {"skill_assessment_scores": {"embeddings": 20}}
+    }
+    _, info = capability(Candidate(raw), 0.5)
+    assert info["bluffs"] == 1
+    assert info["core_bluffs"] == 1
+    assert any("embeddings" in b for b in info["bluff_details"])
+
+
+def test_counterfactual_explanation_format():
+    """Counterfactual should return a valid promotion path instruction for non-top ranks."""
+    from redrob_ranker.counterfactual import counterfactual
+    raw = {
+        "candidate_id": "CAND_0000005",
+        "profile": {"current_title": "Backend Engineer", "years_of_experience": 5.0, "summary": "", "headline": ""},
+        "career_history": [],
+        "education": [],
+        "skills": [],
+        "redrob_signals": {}
+    }
+    scored = {
+        "score": 0.35,
+        "buckets": {"capability": 0.3, "growth": 0.4, "adaptability": 0.2},
+        "title_gate": 0.4,
+        "preference": 0.95
+    }
+    cf_text = counterfactual(Candidate(raw), scored, rank=20)
+    assert cf_text is not None
+    assert "Promotion path:" in cf_text
+
+
+def test_rank_stability_categorization():
+    """Rank stability label matches correct boundary thresholds."""
+    from redrob_ranker.confidence import rank_stability_label
+    # Under completely uniform buckets, cv should be 0 (Stable)
+    label_stable = rank_stability_label(0.5, {"capability": 0.5, "growth": 0.5, "adaptability": 0.5}, 1.0)
+    assert label_stable == "Stable"
+    
+    # Highly skewed buckets should result in Fragile or Moderate stability
+    label_skewed = rank_stability_label(0.5, {"capability": 0.95, "growth": 0.05, "adaptability": 0.05}, 1.0)
+    assert label_skewed in ("Fragile", "Moderate")
