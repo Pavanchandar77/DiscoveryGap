@@ -1,3 +1,13 @@
+---
+title: Redrob Intelligent Candidate Ranker
+emoji: 🎯
+colorFrom: violet
+colorTo: indigo
+sdk: streamlit
+app_file: app.py
+pinned: false
+---
+
 # DiscoveryGap
 # Redrob Intelligent Candidate Ranker — INDIA.RUNS Track 1
 
