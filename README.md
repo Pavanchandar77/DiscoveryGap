@@ -4,7 +4,7 @@ emoji: 🎯
 colorFrom: purple
 colorTo: indigo
 sdk: streamlit
-app_file: app.py
+app_file: redrob-ranker/app.py
 pinned: false
 ---
 
