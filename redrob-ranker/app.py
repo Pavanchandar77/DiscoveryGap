@@ -25,36 +25,101 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
-html, body, [class*="css"], .stMarkdown, p, div, span, h1, h2, h3, h4, h5, h6 {
+/* Global Font Override */
+html, body, [class*="css"], .stMarkdown, p, div, span, label, h1, h2, h3, h4, h5, h6 {
     font-family: 'Outfit', sans-serif !important;
 }
 
+/* Background gradient styling */
+[data-testid="stAppViewContainer"] {
+    background-color: #08090d !important;
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(192, 132, 252, 0.08) 0%, transparent 40%) !important;
+}
+
+/* Metric card styling */
+div[data-testid="metric-container"] {
+    background: rgba(30, 41, 59, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 16px !important;
+    padding: 24px 28px !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    transition: transform 0.3s ease, border-color 0.3s ease !important;
+}
+
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-2px) !important;
+    border-color: rgba(167, 139, 250, 0.3) !important;
+}
+
 div[data-testid="stMetricValue"] {
-    font-size: 2.2rem !important;
+    font-size: 2.4rem !important;
     font-weight: 800 !important;
     background: linear-gradient(135deg, #c084fc 0%, #818cf8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
-div.stAlert, div.stExpander, div[data-testid="stDataFrame"] {
-    background: rgba(255, 255, 255, 0.02) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05) !important;
+/* File Uploader Container */
+section[data-testid="stFileUploadDropzone"] {
+    background: rgba(30, 41, 59, 0.15) !important;
+    border: 2px dashed rgba(167, 139, 250, 0.35) !important;
+    border-radius: 16px !important;
+    padding: 30px !important;
+    transition: all 0.3s ease !important;
 }
 
+section[data-testid="stFileUploadDropzone"]:hover {
+    border-color: #a78bfa !important;
+    background: rgba(30, 41, 59, 0.25) !important;
+    box-shadow: 0 0 15px rgba(167, 139, 250, 0.15) !important;
+}
+
+/* Download Button styling */
+div[data-testid="stDownloadButton"] button {
+    background: linear-gradient(90deg, #c084fc 0%, #6366f1 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 30px !important;
+    padding: 12px 36px !important;
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
+    box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    cursor: pointer !important;
+}
+
+div[data-testid="stDownloadButton"] button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5) !important;
+}
+
+/* Glassmorphism containers */
+div.stAlert, div.stExpander, div[data-testid="stDataFrame"] {
+    background: rgba(30, 41, 59, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Text Headers styling */
 h1 {
     background: linear-gradient(90deg, #c084fc 0%, #6366f1 50%, #38bdf8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 800 !important;
-    font-size: 3.2rem !important;
+    font-size: 3.5rem !important;
+    letter-spacing: -0.05em !important;
+    margin-bottom: 10px !important;
 }
 
 h2, h3 {
     font-weight: 700 !important;
-    color: #f1f5f9 !important;
+    color: #f8fafc !important;
+    letter-spacing: -0.02em !important;
 }
 </style>
 """, unsafe_allow_html=True)
