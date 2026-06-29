@@ -1,7 +1,7 @@
 ---
 title: Redrob Intelligent Candidate Ranker
 emoji: 🎯
-colorFrom: violet
+colorFrom: purple
 colorTo: indigo
 sdk: streamlit
 app_file: app.py
