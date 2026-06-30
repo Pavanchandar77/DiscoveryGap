@@ -98,14 +98,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ── FILE UPLOADER CARD ── */
-div[data-testid="stFileUploader"] {
+[data-testid="stFileUploader"] {
     max-width: 750px !important;
     margin: -16px auto 30px auto !important;
     padding: 0 !important;
 }
 
 /* The dropzone connects to the header card above */
-section[data-testid="stFileUploadDropzone"] {
+[data-testid="stFileUploadDropzone"] {
     background: rgba(10, 13, 18, 0.85) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     border-top: none !important;
@@ -115,21 +115,26 @@ section[data-testid="stFileUploadDropzone"] {
     transition: all 0.3s ease !important;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
-section[data-testid="stFileUploadDropzone"]:hover {
+[data-testid="stFileUploadDropzone"]:hover {
     border-color: rgba(34, 211, 238, 0.3) !important;
 }
 
-/* Hide ALL default text inside the dropzone */
-div[data-testid="stFileUploadDropzone"] [data-testid="stUploadDropzoneText"],
-div[data-testid="stFileUploader"] label,
-section[data-testid="stFileUploadDropzone"] small {
+/* Hide ALL default text, labels, and limit strings inside the dropzone */
+[data-testid="stFileUploadDropzone"] [data-testid="stUploadDropzoneText"],
+[data-testid="stFileUploader"] label,
+[data-testid="stFileUploadDropzone"] small,
+[data-testid="stFileUploadDropzone"] span:not(button span):not(button *) {
     display: none !important;
 }
 
 /* Browse Files button — clean white pill */
-section[data-testid="stFileUploadDropzone"] button {
+[data-testid="stFileUploadDropzone"] button {
     background-color: #ffffff !important;
     color: #000000 !important;
     border-radius: 9999px !important;
@@ -147,10 +152,24 @@ section[data-testid="stFileUploadDropzone"] button {
     line-height: 1.4 !important;
 }
 
-section[data-testid="stFileUploadDropzone"] button:hover {
+[data-testid="stFileUploadDropzone"] button:hover {
     background-color: #f1f5f9 !important;
     transform: scale(1.03) !important;
     box-shadow: 0 6px 30px rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Hide all child elements inside the browse button to prevent duplicate text overlaps */
+[data-testid="stFileUploadDropzone"] button * {
+    display: none !important;
+}
+
+[data-testid="stFileUploadDropzone"] button::after {
+    content: "Select File" !important;
+    display: block !important;
+    font-size: 0.875rem !important;
+    color: #000000 !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
 }
 
 /* ── ACTION BUTTONS (Simulation / Download) ── */
