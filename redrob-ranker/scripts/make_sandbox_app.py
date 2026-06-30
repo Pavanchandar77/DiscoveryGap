@@ -444,17 +444,6 @@ h2, h3 {
         grid-template-columns: 1fr !important;
     }
 }
-</style>
-"""), unsafe_allow_html=True)
-}
-
-div[data-testid="stMetricValue"] {
-    font-size: 2.4rem !important;
-    font-weight: 800 !important;
-    background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
 
 /* Glassmorphism containers */
 div.stAlert, div.stExpander, div[data-testid="stDataFrame"] {
@@ -478,7 +467,7 @@ h2, h3 {
     letter-spacing: -0.02em !important;
 }
 </style>
-""", unsafe_allow_html=True)
+"""), unsafe_allow_html=True)
 
 
 @st.cache_data(show_spinner=False)
