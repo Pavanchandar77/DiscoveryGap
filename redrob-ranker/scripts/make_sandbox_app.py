@@ -4,7 +4,7 @@
 Runs on CPU with the deterministic offline embedding backend.
 Designed to boot instantly on HuggingFace Spaces.
 """
-import sys, json, io, csv, time
+import sys, json, io, csv, time, textwrap
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -308,7 +308,7 @@ STEPS = [
 if st.session_state.processing:
     current_step = st.session_state.step
     if current_step < len(STEPS):
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
         <style>
         /* Hide all Streamlit elements while loading */
         [data-testid="stHeader"], [data-testid="stSidebar"], .stApp {{
@@ -340,7 +340,7 @@ if st.session_state.processing:
                 {" ".join(f'<div style="width: 6px; height: 16px; border-radius: 9999px; background: {"#22d3ee" if i == current_step else ("rgba(255,255,255,0.4)" if i < current_step else "rgba(255,255,255,0.1)")}; transform: { "scaleY(1.5)" if i == current_step else "scaleY(1)" }; transition: all 0.5s ease;"></div>' for i in range(len(STEPS)))}
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
         time.sleep(0.8)
         st.session_state.step += 1
         st.rerun()
@@ -367,7 +367,7 @@ if not st.session_state.processed:
     </div>
     """, unsafe_allow_html=True)
     # Card header for the file uploader
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <div style="max-width: 750px; margin: 0 auto; padding: 0;">
         <div style="background: rgba(10,13,18,0.85); border: 1px solid rgba(255,255,255,0.08);
                     border-bottom: none; border-radius: 24px 24px 0 0; padding: 36px 40px 20px 40px;
@@ -380,7 +380,7 @@ if not st.session_state.processed:
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # Render actual streamlit file uploader
     up = st.file_uploader("Upload candidates.jsonl (≤100)", type=["jsonl"], label_visibility="collapsed")
@@ -440,7 +440,16 @@ if not st.session_state.processed:
 
 # 3. Load processed data
 raws = st.session_state.raws
+if not raws:
+    st.warning("No candidates loaded. Please upload a valid JSONL file or run the market simulation.")
+    st.session_state.processed = False
+    st.rerun()
+
 cards = _rank(raws)
+if not cards:
+    st.warning("No valid candidates found in the uploaded file (all filtered out or honeypots).")
+    st.session_state.processed = False
+    st.rerun()
 
 # Results page header
 st.markdown("""
@@ -461,42 +470,42 @@ st.markdown("<h2 style='font-family: \"Outfit\"; font-weight: 700; color: #f8faf
 m1, m2, m3, m4 = st.columns(4)
 
 with m1:
-    st.markdown(f"""
+    st.markdown(textwrap.dedent(f"""
     <div style="background: rgba(30, 41, 59, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 18px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
         <div style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 8px;">ATS Market Efficiency</div>
         <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #f43f5e 0%, #fda4af 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{eff:.0%}</div>
         <div style="font-size: 0.8rem; color: #f43f5e; margin-top: 4px; font-weight: 500;">-{1-eff:.0%} mispriced</div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
 with m2:
-    st.markdown(f"""
+    st.markdown(textwrap.dedent(f"""
     <div style="background: rgba(30, 41, 59, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 18px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
         <div style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 8px;">Hidden Gems Found</div>
         <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #10b981 0%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{len(gems)}</div>
         <div style="font-size: 0.8rem; color: #10b981; margin-top: 4px; font-weight: 500;">Overlooked top-tier candidates</div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
 with m3:
     avg_tmi_str = f"{int(np.mean(tmis)):+d}" if tmis else "—"
-    st.markdown(f"""
+    st.markdown(textwrap.dedent(f"""
     <div style="background: rgba(30, 41, 59, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 18px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
         <div style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 8px;">Avg Mispricing (TMI)</div>
         <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #c084fc 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{avg_tmi_str}</div>
         <div style="font-size: 0.8rem; color: #a78bfa; margin-top: 4px; font-weight: 500;">Mean rank positions saved</div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
 with m4:
     highest_tmi_str = f"{max(tmis):+d}" if tmis else "—"
-    st.markdown(f"""
+    st.markdown(textwrap.dedent(f"""
     <div style="background: rgba(30, 41, 59, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 18px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
         <div style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 8px;">Highest TMI</div>
         <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #38bdf8 0%, #60a5fa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{highest_tmi_str}</div>
         <div style="font-size: 0.8rem; color: #38bdf8; margin-top: 4px; font-weight: 500;">Max rank position saved</div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
 # --- Screen 2: the single biggest ATS failure ---
 hero = max(cards[:20], key=lambda c: (c["tmi"] if c["tmi"] is not None else -1)) if cards else None
@@ -508,7 +517,7 @@ if hero:
     if not cn_lis:
         cn_lis = '<li style="font-size: 0.85rem; color: #64748b; font-style: italic;">No risks detected</li>'
 
-    st.markdown(f"""
+    st.markdown(textwrap.dedent(f"""
     <div style="position: relative; background: #070709; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);">
         <div style="position: absolute; top: 30px; right: 30px; text-align: right;">
             <div style="font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Talent Mispricing Index</div>
@@ -565,7 +574,7 @@ if hero:
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
 # --- Hidden gems ---
 if gems:
@@ -578,7 +587,7 @@ if gems:
         if not cn_lis:
             cn_lis = '<li style="font-size: 0.85rem; color: #64748b; font-style: italic;">No risks detected</li>'
             
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
         <div style="position: relative; background: #070709; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 30px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);">
             <div style="position: absolute; top: 30px; right: 30px; text-align: right;">
                 <div style="font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Talent Mispricing Index</div>
@@ -635,7 +644,7 @@ if gems:
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
 # --- Quadrant chart ---
 st.subheader("The bet map — Fit × Conviction (bubble = how badly the ATS mispriced them)")
