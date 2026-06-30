@@ -141,7 +141,8 @@ h1, h2, h3, h4, h5, h6 {
     padding: 12px 36px !important;
     border: none !important;
     font-weight: 600 !important;
-    font-size: 0.9rem !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
     box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1) !important;
     transition: all 0.3s ease !important;
     cursor: pointer !important;
@@ -149,7 +150,6 @@ h1, h2, h3, h4, h5, h6 {
     display: block !important;
     min-height: unset !important;
     height: auto !important;
-    line-height: 1.4 !important;
 }
 
 [data-testid="stFileUploadDropzone"] button:hover {
