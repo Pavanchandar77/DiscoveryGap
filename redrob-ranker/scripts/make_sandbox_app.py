@@ -10,7 +10,7 @@ Runs on CPU with the deterministic offline embedding backend (no model download,
 HuggingFace Space boots without reaching the network. Run locally:
   streamlit run scripts/make_sandbox_app.py
 """
-import sys, json, io, csv
+import sys, json, io, csv, time
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -38,10 +38,112 @@ html, body, [class*="css"], .stMarkdown, p, div, span, label, h1, h2, h3, h4, h5
 
 /* Background gradient styling */
 [data-testid="stAppViewContainer"] {
-    background-color: #08090d !important;
+    background-color: #020202 !important;
     background-image: 
-        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(192, 132, 252, 0.08) 0%, transparent 40%) !important;
+        radial-gradient(ellipse 120% 100% at 50% -10%, rgba(34, 211, 238, 0.06) 0%, transparent 60%) !important;
+}
+
+/* Hide default Streamlit header for clean fullscreen web app look */
+[data-testid="stHeader"] {
+    background-color: transparent !important;
+}
+
+/* File Uploader Container */
+div[data-testid="stFileUploader"] {
+    max-width: 750px !important;
+    margin: -70px auto 30px auto !important; /* Pull up to merge into custom HTML card */
+    padding: 0 40px !important;
+}
+
+section[data-testid="stFileUploadDropzone"] {
+    background: transparent !important;
+    border: 1px dashed rgba(255, 255, 255, 0.15) !important;
+    border-radius: 20px !important;
+    padding: 24px !important;
+    transition: all 0.3s ease !important;
+}
+
+section[data-testid="stFileUploadDropzone"]:hover {
+    border-color: rgba(34, 211, 238, 0.5) !important;
+    background: rgba(34, 211, 238, 0.02) !important;
+}
+
+/* Hide default file uploader text elements */
+div[data-testid="stFileUploadDropzone"] [data-testid="stUploadDropzoneText"] {
+    display: none !important;
+}
+div[data-testid="stFileUploader"] label {
+    display: none !important;
+}
+div[data-testid="stFileUploadDropzone"] button svg {
+    display: none !important;
+}
+
+/* Restyle Browse File Button to match React button */
+div[data-testid="stFileUploadDropzone"] button {
+    font-size: 0 !important; /* Hide original text */
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border-radius: 9999px !important;
+    padding: 14px 32px !important;
+    border: none !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1) !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
+
+div[data-testid="stFileUploadDropzone"] button:hover {
+    background-color: #f1f5f9 !important;
+    transform: scale(1.02) !important;
+    box-shadow: 0 4px 25px rgba(255, 255, 255, 0.2) !important;
+}
+
+div[data-testid="stFileUploadDropzone"] button::after {
+    content: "Select File" !important;
+    font-size: 0.875rem !important;
+    color: #000000 !important;
+}
+
+/* Restyle other buttons (Simulation and Download) to be premium dark pills */
+div[data-testid="stButton"] button {
+    background-color: #0c0d12 !important;
+    color: #cbd5e1 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 9999px !important;
+    padding: 10px 24px !important;
+    font-weight: 500 !important;
+    font-size: 0.9rem !important;
+    transition: all 0.3s ease !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
+
+div[data-testid="stButton"] button:hover {
+    background-color: #161822 !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+div[data-testid="stDownloadButton"] button {
+    background-color: #0c0d12 !important;
+    color: #cbd5e1 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 9999px !important;
+    padding: 10px 24px !important;
+    font-weight: 500 !important;
+    font-size: 0.9rem !important;
+    transition: all 0.3s ease !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
+
+div[data-testid="stDownloadButton"] button:hover {
+    background-color: #161822 !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
 }
 
 /* Metric card styling */
@@ -58,49 +160,15 @@ div[data-testid="metric-container"] {
 
 div[data-testid="metric-container"]:hover {
     transform: translateY(-2px) !important;
-    border-color: rgba(167, 139, 250, 0.3) !important;
+    border-color: rgba(34, 211, 238, 0.3) !important;
 }
 
 div[data-testid="stMetricValue"] {
     font-size: 2.4rem !important;
     font-weight: 800 !important;
-    background: linear-gradient(135deg, #c084fc 0%, #818cf8 100%);
+    background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-}
-
-/* File Uploader Container */
-section[data-testid="stFileUploadDropzone"] {
-    background: rgba(30, 41, 59, 0.15) !important;
-    border: 2px dashed rgba(167, 139, 250, 0.35) !important;
-    border-radius: 16px !important;
-    padding: 30px !important;
-    transition: all 0.3s ease !important;
-}
-
-section[data-testid="stFileUploadDropzone"]:hover {
-    border-color: #a78bfa !important;
-    background: rgba(30, 41, 59, 0.25) !important;
-    box-shadow: 0 0 15px rgba(167, 139, 250, 0.15) !important;
-}
-
-/* Download Button styling */
-div[data-testid="stDownloadButton"] button {
-    background: linear-gradient(90deg, #c084fc 0%, #6366f1 100%) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 30px !important;
-    padding: 12px 36px !important;
-    font-weight: 700 !important;
-    font-size: 1.05rem !important;
-    box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    cursor: pointer !important;
-}
-
-div[data-testid="stDownloadButton"] button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5) !important;
 }
 
 /* Glassmorphism containers */
@@ -113,9 +181,6 @@ div.stAlert, div.stExpander, div[data-testid="stDataFrame"] {
 
 /* Text Headers styling */
 h1 {
-    background: linear-gradient(90deg, #c084fc 0%, #6366f1 50%, #38bdf8 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     font-weight: 800 !important;
     font-size: 3.5rem !important;
     letter-spacing: -0.05em !important;
@@ -130,6 +195,161 @@ h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
+# Session State Initialization
+if "processing" not in st.session_state:
+    st.session_state.processing = False
+if "step" not in st.session_state:
+    st.session_state.step = 0
+if "processed" not in st.session_state:
+    st.session_state.processed = False
+if "raws" not in st.session_state:
+    st.session_state.raws = None
+
+STEPS = [
+  "Initializing Talent Market Feed...",
+  "Scanning Inefficient Assets...",
+  "Pricing Experience Signals...",
+  "Detecting Value Discrepancies...",
+  "Isolating High-Conviction Anomalies...",
+  "Acquiring Hidden Gems..."
+]
+
+# 1. Processing Screen rendering loop
+if st.session_state.processing:
+    current_step = st.session_state.step
+    if current_step < len(STEPS):
+        st.markdown(f"""
+        <style>
+        /* Hide all Streamlit elements while loading */
+        [data-testid="stHeader"], [data-testid="stSidebar"], .stApp {{
+            background-color: #050505 !important;
+        }}
+        [data-testid="stVerticalBlock"] > div:not(.loading-container) {{
+            display: none !important;
+        }}
+        .loading-container {{
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 80vh !important;
+            width: 100% !important;
+            font-family: 'Outfit', sans-serif !important;
+            color: #ffffff !important;
+        }}
+        @keyframes fadeInOut {{
+            0%, 100% {{ opacity: 0.6; filter: blur(2px); }}
+            50% {{ opacity: 1; filter: blur(0px); }}
+        }}
+        </style>
+        <div class="loading-container">
+            <div style="font-size: 2.2rem; font-weight: 500; text-align: center; margin-bottom: 50px; letter-spacing: -0.02em; animation: fadeInOut 1.5s infinite; background: linear-gradient(90deg, #ffffff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                {STEPS[current_step]}
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                {" ".join(f'<div style="width: 6px; height: 16px; border-radius: 9999px; background: {"#22d3ee" if i == current_step else ("rgba(255,255,255,0.4)" if i < current_step else "rgba(255,255,255,0.1)")}; transform: { "scaleY(1.5)" if i == current_step else "scaleY(1)" }; transition: all 0.5s ease;"></div>' for i in range(len(STEPS)))}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        time.sleep(0.8)
+        st.session_state.step += 1
+        st.rerun()
+    else:
+        st.session_state.processing = False
+        st.session_state.processed = True
+        st.rerun()
+
+# 2. Landing Screen rendering (when not processed and not loading)
+if not st.session_state.processed:
+    st.markdown("""
+    <div style="text-align: center; margin-top: 60px; margin-bottom: 40px; font-family: 'Outfit', sans-serif;">
+        <div style="display: inline-flex; align-items: center; gap: 8px; px: 12px; py: 4px; border-radius: 9999px; background: #0A1015; border: 1px solid rgba(255,255,255,0.05); padding: 6px 16px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.15em; color: #94a3b8; margin-bottom: 30px; box-shadow: 0 0 20px rgba(34,211,238,0.05);">
+            Talent Market Intelligence
+        </div>
+        <h1 style="font-size: 4.5rem; font-weight: 500; color: #ffffff; letter-spacing: -0.04em; line-height: 1.1; margin: 0 0 20px 0;">
+            57% of Top Talent <br/>
+            <span style="color: #475569;">Is Mispriced.</span>
+        </h1>
+        <p style="font-size: 1.25rem; color: #94a3b8; font-weight: 300; max-width: 700px; margin: 0 auto 50px auto; line-height: 1.6;">
+            Traditional ATS systems reward visibility. <br/>
+            <span style="color: #cbd5e1; font-weight: 400;">Discovery finds value where everyone else looks away.</span>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # The custom card backing the file uploader
+    st.markdown("""
+    <div style="background: #070709; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 30px; padding: 40px 40px 90px 40px; max-width: 750px; margin: 0 auto 30px auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <div style="text-align: left;">
+                <h3 style="color: #ffffff; font-size: 1.3rem; font-weight: 600; margin: 0;">Activate Discovery Engine</h3>
+                <p style="color: #64748b; font-size: 0.9rem; margin: 4px 0 0 0; font-weight: 300;">Upload candidates.jsonl (≤100) to reveal hidden density.</p>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Render actual streamlit file uploader (pulled up into card via negative CSS margin)
+    up = st.file_uploader("Upload candidates.jsonl (≤100)", type=["jsonl"], label_visibility="collapsed")
+    if up is not None:
+        st.session_state.raws = [json.loads(l) for l in up.read().decode("utf-8").splitlines() if l.strip()][:100]
+        st.session_state.processing = True
+        st.session_state.step = 0
+        st.rerun()
+
+    # Buttons layout
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("⚡ Or run market simulation", use_container_width=True):
+            p = C.DATA / "candidates.jsonl"
+            if p.exists():
+                st.session_state.raws = [json.loads(l) for l in p.read_text(encoding="utf-8").splitlines() if l.strip()][:100]
+                st.session_state.processing = True
+                st.session_state.step = 0
+                st.rerun()
+    with c2:
+        sample_path = C.DATA / "candidates.jsonl"
+        sample_data = ""
+        if sample_path.exists():
+            sample_data = sample_path.read_text(encoding="utf-8")
+        st.download_button(
+            "📋 Download sample pool",
+            data=sample_data,
+            file_name="candidates.jsonl",
+            mime="text/plain",
+            use_container_width=True
+        )
+
+    # Proof Strip at bottom
+    st.markdown("""
+    <div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 40px; margin-top: 80px; font-family: 'Outfit', sans-serif;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 30px; max-width: 900px; margin: 0 auto; text-align: center;">
+            <div>
+                <div style="font-size: 2.2rem; font-weight: 700; color: #ffffff; letter-spacing: -0.04em;">100,000+</div>
+                <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; color: #64748b; letter-spacing: 0.1em; margin-top: 4px;">Candidates Analyzed</div>
+            </div>
+            <div>
+                <div style="font-size: 2.2rem; font-weight: 700; color: #22d3ee; letter-spacing: -0.04em;">57</div>
+                <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; color: #22d3ee; letter-spacing: 0.1em; margin-top: 4px;">Hidden Gems Found</div>
+            </div>
+            <div>
+                <div style="font-size: 2.2rem; font-weight: 700; color: #64748b; text-decoration: line-through; letter-spacing: -0.04em;">#1788</div>
+                <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; color: #64748b; letter-spacing: 0.1em; margin-top: 4px;">ATS Missed Rank</div>
+            </div>
+            <div>
+                <div style="font-size: 2.2rem; font-weight: 700; color: #ffffff; letter-spacing: -0.04em;">43%</div>
+                <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; color: #64748b; letter-spacing: 0.1em; margin-top: 4px;">Market Inefficiency</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
+
+# 3. Load processed data
+raws = st.session_state.raws
+cards = _rank(raws)
+
+# Results page header
 st.markdown("""
 <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(192, 132, 252, 0.12)); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 40px; text-align: center; margin-top: 10px; margin-bottom: 30px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);">
     <span style="background: linear-gradient(90deg, #c084fc, #6366f1); color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);">INDIA.RUNS Track 1 — Category Defining</span>
@@ -137,58 +357,6 @@ st.markdown("""
     <p style="color: #94a3b8; font-size: 1.1rem; max-width: 700px; margin: 0 auto; line-height: 1.6; font-family: 'Outfit', sans-serif;">Identify overlooked candidates, quantify conviction, and expose why traditional ATS search systems missed them.</p>
 </div>
 """, unsafe_allow_html=True)
-
-
-@st.cache_data(show_spinner=False)
-def _jd_text() -> str:
-    p = C.DATA / "job_description.txt"
-    return p.read_text(encoding="utf-8") if p.exists() else (
-        "Senior AI Engineer — embeddings, retrieval, ranking, evaluation, production ML at a "
-        "product company.")
-
-
-@st.cache_resource(show_spinner="Loading embedding backend (first run only)…")
-def _jd_vec() -> np.ndarray:
-    return encode_query(_jd_text())
-
-
-def _rank(raws: list[dict]) -> list[dict]:
-    """Score, exclude honeypots, sort, and build a conviction card per candidate."""
-    texts = [Candidate(r).all_text for r in raws]
-    sem_raw = cosine_to_jd(encode_texts(texts), _jd_vec())          # ATS-style raw similarity
-    sem = pool_normalize(sem_raw)
-    id_sem = {Candidate(r).id: float(s) for r, s in zip(raws, sem)}
-    # ATS baseline order (pure similarity) -> ats_rank
-    order = sorted(range(len(raws)), key=lambda i: -sem_raw[i])
-    ats_rank = {Candidate(raws[idx]).id: rank for rank, idx in enumerate(order, 1)}
-
-    scored = []
-    for r in raws:
-        c = Candidate(r); s = score_candidate(c, id_sem.get(c.id, 0.0))
-        if s["is_honeypot"]:
-            continue
-        s["rscore"] = round(s["score"], C.SCORE_DECIMALS)
-        scored.append((c, s))
-    scored.sort(key=lambda cs: (-cs[1]["rscore"], cs[0].id))
-
-    cutoff = max(5, len(raws) // 3)        # cohort-relative "ATS missed them" threshold
-    cards = []
-    for i, (c, s) in enumerate(scored, 1):
-        card = presentation.card(c, s, i, ats_rank.get(c.id), ats_cutoff=cutoff)
-        card["reasoning"] = reasoning.make(c, s, i)
-        cards.append(card)
-    return cards
-
-
-up = st.file_uploader("Upload candidates.jsonl (≤100)", type=["jsonl"])
-if up is None:
-    st.info("Upload a JSONL sample (each line = one candidate: profile, career_history, "
-            "education, skills, redrob_signals).")
-    st.stop()
-
-raws = [json.loads(l) for l in up.read().decode("utf-8").splitlines() if l.strip()][:100]
-with st.spinner("Scoring, scoring conviction, and finding hidden gems…"):
-    cards = _rank(raws)
 
 gems = [c for c in cards if c["quadrant"] == "Hidden Gem"]
 n = len(cards)
