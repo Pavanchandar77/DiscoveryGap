@@ -38,9 +38,7 @@ html, body, [class*="css"], .stMarkdown, p, div, span, label, h1, h2, h3, h4, h5
 
 /* Background gradient styling */
 [data-testid="stAppViewContainer"] {
-    background-color: #020202 !important;
-    background-image: 
-        radial-gradient(ellipse 120% 100% at 50% -10%, rgba(34, 211, 238, 0.06) 0%, transparent 60%) !important;
+    background-color: transparent !important; /* transparent so canvas background shows through */
 }
 
 /* Hide default Streamlit header for clean fullscreen web app look */
@@ -51,21 +49,26 @@ html, body, [class*="css"], .stMarkdown, p, div, span, label, h1, h2, h3, h4, h5
 /* File Uploader Container */
 div[data-testid="stFileUploader"] {
     max-width: 750px !important;
-    margin: -70px auto 30px auto !important; /* Pull up to merge into custom HTML card */
+    margin: 40px auto !important;
     padding: 0 40px !important;
 }
 
 section[data-testid="stFileUploadDropzone"] {
-    background: transparent !important;
-    border: 1px dashed rgba(255, 255, 255, 0.15) !important;
-    border-radius: 20px !important;
-    padding: 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #070709 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 30px !important;
+    padding: 40px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
     transition: all 0.3s ease !important;
 }
 
 section[data-testid="stFileUploadDropzone"]:hover {
-    border-color: rgba(34, 211, 238, 0.5) !important;
-    background: rgba(34, 211, 238, 0.02) !important;
+    border-color: rgba(34, 211, 238, 0.4) !important;
+    background: #0A0D12 !important;
 }
 
 /* Hide default file uploader text elements */
@@ -75,24 +78,43 @@ div[data-testid="stFileUploadDropzone"] [data-testid="stUploadDropzoneText"] {
 div[data-testid="stFileUploader"] label {
     display: none !important;
 }
-div[data-testid="stFileUploadDropzone"] button svg {
-    display: none !important;
+
+/* Inject title and subtitle using pseudo elements */
+section[data-testid="stFileUploadDropzone"]::before {
+    content: "Activate Discovery Engine" !important;
+    display: block !important;
+    color: #ffffff !important;
+    font-size: 1.3rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 12px !important;
+    text-align: center !important;
+    font-family: 'Outfit', sans-serif !important;
+}
+
+section[data-testid="stFileUploadDropzone"]::after {
+    content: "Upload candidates.jsonl (≤100) to reveal hidden density." !important;
+    display: block !important;
+    color: #64748b !important;
+    font-size: 0.9rem !important;
+    font-weight: 300 !important;
+    margin-top: 16px !important;
+    text-align: center !important;
+    font-family: 'Outfit', sans-serif !important;
 }
 
 /* Restyle Browse File Button to match React button */
 div[data-testid="stFileUploadDropzone"] button {
-    font-size: 0 !important; /* Hide original text */
     background-color: #ffffff !important;
-    color: #000000 !important;
     border-radius: 9999px !important;
     padding: 14px 32px !important;
     border: none !important;
-    font-weight: 600 !important;
     box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1) !important;
     transition: all 0.3s ease !important;
     cursor: pointer !important;
     display: block !important;
     margin: 0 auto !important;
+    min-height: auto !important;
+    height: auto !important;
 }
 
 div[data-testid="stFileUploadDropzone"] button:hover {
@@ -101,10 +123,18 @@ div[data-testid="stFileUploadDropzone"] button:hover {
     box-shadow: 0 4px 25px rgba(255, 255, 255, 0.2) !important;
 }
 
+/* Hide all child elements inside the browse button to prevent duplicate text overlaps */
+div[data-testid="stFileUploadDropzone"] button * {
+    display: none !important;
+}
+
 div[data-testid="stFileUploadDropzone"] button::after {
     content: "Select File" !important;
+    display: block !important;
     font-size: 0.875rem !important;
     color: #000000 !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
 }
 
 /* Restyle other buttons (Simulation and Download) to be premium dark pills */
@@ -193,6 +223,71 @@ h2, h3 {
     letter-spacing: -0.02em !important;
 }
 </style>
+<canvas id="living-market-canvas" style="position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.7; background-color: #020202;"></canvas>
+<script>
+(function() {
+    const canvas = document.getElementById('living-market-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let particles = [];
+    let lastTime = performance.now();
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        particles = [];
+        const numParticles = window.innerWidth < 768 ? 40 : 120;
+        for (let i = 0; i < numParticles; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                baseY: Math.random() * canvas.height,
+                speed: 0.1 + Math.random() * 0.4,
+                size: Math.random() * 1.5 + 0.5,
+                opacity: Math.random() * 0.4 + 0.1,
+            });
+        }
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    function draw(time) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Shifting curves (Valuation Bands)
+        for (let i = 0; i < 4; i++) {
+            const bandY = (canvas.height / 5) * (i + 1) + Math.sin(time / 2000 + i) * 20;
+            ctx.beginPath();
+            ctx.moveTo(0, bandY);
+            ctx.bezierCurveTo(canvas.width / 3, bandY + 40, (canvas.width / 3) * 2, bandY - 40, canvas.width, bandY);
+            ctx.strokeStyle = `rgba(34, 211, 238, 0.015)`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        particles.forEach(p => {
+            p.x -= p.speed;
+            if (p.x < -10) {
+                p.x = canvas.width + 10;
+                p.baseY = Math.random() * canvas.height;
+            }
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.baseY, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+            ctx.fill();
+        });
+
+        requestAnimationFrame(draw);
+    }
+
+    requestAnimationFrame(draw);
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # Session State Initialization
@@ -277,17 +372,7 @@ if not st.session_state.processed:
     </div>
     """, unsafe_allow_html=True)
 
-    # The custom card backing the file uploader
-    st.markdown("""
-    <div style="background: #070709; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 30px; padding: 40px 40px 90px 40px; max-width: 750px; margin: 0 auto 30px auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
-            <div style="text-align: left;">
-                <h3 style="color: #ffffff; font-size: 1.3rem; font-weight: 600; margin: 0;">Activate Discovery Engine</h3>
-                <p style="color: #64748b; font-size: 0.9rem; margin: 4px 0 0 0; font-weight: 300;">Upload candidates.jsonl (≤100) to reveal hidden density.</p>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+
 
     # Render actual streamlit file uploader (pulled up into card via negative CSS margin)
     up = st.file_uploader("Upload candidates.jsonl (≤100)", type=["jsonl"], label_visibility="collapsed")
