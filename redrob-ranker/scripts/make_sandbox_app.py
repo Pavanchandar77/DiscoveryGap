@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
 """Talent Conviction Engine — sandbox (REQUIRED 'sandbox link').
 
-Not just a ranker: for every candidate it shows three numbers an ATS never does —
-Fit (relevance), Conviction (certainty), Discovery Gap (how much keyword search underrates
-them) — plots them on a Fit×Conviction quadrant, surfaces the Hidden Gems the ATS buried, and
-explains both sides (Trust Drivers / Concerns). Emits a valid 4-column submission CSV.
-
-Runs on CPU with the deterministic offline embedding backend (no model download, no HF), so a
-HuggingFace Space boots without reaching the network. Run locally:
-  streamlit run scripts/make_sandbox_app.py
+Runs on CPU with the deterministic offline embedding backend.
+Designed to boot instantly on HuggingFace Spaces.
 """
 import sys, json, io, csv, time
 from pathlib import Path
@@ -16,7 +10,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 from redrob_ranker import config as C                              # noqa: E402
 from redrob_ranker.schema import Candidate                          # noqa: E402
@@ -26,165 +20,170 @@ from redrob_ranker import reasoning, presentation                   # noqa: E402
 
 st.set_page_config(page_title="Talent Conviction Engine", layout="wide")
 
-# Custom CSS for premium styling
+# Custom CSS for premium styling — all effects are pure CSS (Streamlit strips <script> tags)
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
-/* Global Font Override */
-html, body, [class*="css"], .stMarkdown, p, div, span, label, h1, h2, h3, h4, h5, h6 {
+/* ── Global Font ── */
+html, body, [class*="css"], .stMarkdown, p, div, span, label,
+h1, h2, h3, h4, h5, h6 {
     font-family: 'Outfit', sans-serif !important;
 }
 
-/* Background gradient styling */
-[data-testid="stAppViewContainer"] {
-    background-color: transparent !important; /* transparent so canvas background shows through */
+/* ── Background: dark + cyan top-glow + dot grid ── */
+.stApp {
+    background-color: #030305 !important;
+    background-image:
+        radial-gradient(ellipse 90% 45% at 50% -2%, rgba(34,211,238,0.10) 0%, transparent 65%),
+        radial-gradient(circle 1.2px at  5%  8%, rgba(255,255,255,0.12) 1px, transparent 1px),
+        radial-gradient(circle 0.8px at 12% 22%, rgba(255,255,255,0.08) 1px, transparent 1px),
+        radial-gradient(circle 1.0px at 25% 15%, rgba(255,255,255,0.10) 1px, transparent 1px),
+        radial-gradient(circle 0.6px at 35% 35%, rgba(255,255,255,0.06) 1px, transparent 1px),
+        radial-gradient(circle 1.4px at 42%  5%, rgba(255,255,255,0.14) 1px, transparent 1px),
+        radial-gradient(circle 0.7px at 55% 28%, rgba(255,255,255,0.07) 1px, transparent 1px),
+        radial-gradient(circle 1.1px at 62% 12%, rgba(255,255,255,0.11) 1px, transparent 1px),
+        radial-gradient(circle 0.9px at 70% 40%, rgba(255,255,255,0.09) 1px, transparent 1px),
+        radial-gradient(circle 1.3px at 78%  7%, rgba(255,255,255,0.13) 1px, transparent 1px),
+        radial-gradient(circle 0.5px at 85% 30%, rgba(255,255,255,0.05) 1px, transparent 1px),
+        radial-gradient(circle 1.0px at 92% 18%, rgba(255,255,255,0.10) 1px, transparent 1px),
+        radial-gradient(circle 0.8px at 15% 50%, rgba(255,255,255,0.08) 1px, transparent 1px),
+        radial-gradient(circle 1.2px at 30% 55%, rgba(255,255,255,0.12) 1px, transparent 1px),
+        radial-gradient(circle 0.6px at 48% 48%, rgba(255,255,255,0.06) 1px, transparent 1px),
+        radial-gradient(circle 1.0px at 60% 58%, rgba(255,255,255,0.10) 1px, transparent 1px),
+        radial-gradient(circle 0.7px at 75% 52%, rgba(255,255,255,0.07) 1px, transparent 1px),
+        radial-gradient(circle 1.1px at 88% 45%, rgba(255,255,255,0.11) 1px, transparent 1px),
+        radial-gradient(circle 0.9px at  8% 65%, rgba(255,255,255,0.09) 1px, transparent 1px),
+        radial-gradient(circle 1.3px at 22% 70%, rgba(255,255,255,0.13) 1px, transparent 1px),
+        radial-gradient(circle 0.5px at 40% 68%, rgba(255,255,255,0.05) 1px, transparent 1px),
+        radial-gradient(circle 1.0px at 55% 75%, rgba(255,255,255,0.10) 1px, transparent 1px),
+        radial-gradient(circle 0.8px at 68% 62%, rgba(255,255,255,0.08) 1px, transparent 1px),
+        radial-gradient(circle 1.2px at 82% 72%, rgba(255,255,255,0.12) 1px, transparent 1px),
+        radial-gradient(circle 0.6px at 95% 60%, rgba(255,255,255,0.06) 1px, transparent 1px),
+        radial-gradient(circle 1.0px at 18% 82%, rgba(255,255,255,0.10) 1px, transparent 1px),
+        radial-gradient(circle 0.7px at 33% 88%, rgba(255,255,255,0.07) 1px, transparent 1px),
+        radial-gradient(circle 1.1px at 50% 85%, rgba(255,255,255,0.11) 1px, transparent 1px),
+        radial-gradient(circle 0.9px at 65% 90%, rgba(255,255,255,0.09) 1px, transparent 1px),
+        radial-gradient(circle 1.3px at 80% 82%, rgba(255,255,255,0.13) 1px, transparent 1px),
+        radial-gradient(circle 0.5px at 93% 88%, rgba(255,255,255,0.05) 1px, transparent 1px) !important;
 }
 
-/* Hide default Streamlit header for clean fullscreen web app look */
+[data-testid="stAppViewContainer"] {
+    background: transparent !important;
+}
+
+/* Pulsing top glow */
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: -40%;
+    left: 20%;
+    width: 60%;
+    height: 80%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(34,211,238,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    animation: pulseGlow 8s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* Hide default Streamlit header */
 [data-testid="stHeader"] {
     background-color: transparent !important;
 }
 
-/* File Uploader Container */
+/* ── FILE UPLOADER CARD ── */
 div[data-testid="stFileUploader"] {
     max-width: 750px !important;
-    margin: 40px auto !important;
-    padding: 0 40px !important;
+    margin: -16px auto 30px auto !important;
+    padding: 0 !important;
 }
 
+/* The dropzone connects to the header card above */
 section[data-testid="stFileUploadDropzone"] {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: #070709 !important;
+    background: rgba(10, 13, 18, 0.85) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 30px !important;
-    padding: 40px !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
+    border-top: none !important;
+    border-radius: 0 0 24px 24px !important;
+    padding: 24px 40px 40px 40px !important;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5) !important;
     transition: all 0.3s ease !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
 }
 
 section[data-testid="stFileUploadDropzone"]:hover {
-    border-color: rgba(34, 211, 238, 0.4) !important;
-    background: #0A0D12 !important;
+    border-color: rgba(34, 211, 238, 0.3) !important;
 }
 
-/* Hide default file uploader text elements */
-div[data-testid="stFileUploadDropzone"] [data-testid="stUploadDropzoneText"] {
+/* Hide ALL default text inside the dropzone */
+div[data-testid="stFileUploadDropzone"] [data-testid="stUploadDropzoneText"],
+div[data-testid="stFileUploader"] label,
+section[data-testid="stFileUploadDropzone"] small {
     display: none !important;
 }
-div[data-testid="stFileUploader"] label {
-    display: none !important;
-}
 
-/* Inject title and subtitle using pseudo elements */
-section[data-testid="stFileUploadDropzone"]::before {
-    content: "Activate Discovery Engine" !important;
-    display: block !important;
-    color: #ffffff !important;
-    font-size: 1.3rem !important;
-    font-weight: 600 !important;
-    margin-bottom: 12px !important;
-    text-align: center !important;
-    font-family: 'Outfit', sans-serif !important;
-}
-
-section[data-testid="stFileUploadDropzone"]::after {
-    content: "Upload candidates.jsonl (≤100) to reveal hidden density." !important;
-    display: block !important;
-    color: #64748b !important;
-    font-size: 0.9rem !important;
-    font-weight: 300 !important;
-    margin-top: 16px !important;
-    text-align: center !important;
-    font-family: 'Outfit', sans-serif !important;
-}
-
-/* Restyle Browse File Button to match React button */
-div[data-testid="stFileUploadDropzone"] button {
+/* Browse Files button — clean white pill */
+section[data-testid="stFileUploadDropzone"] button {
     background-color: #ffffff !important;
+    color: #000000 !important;
     border-radius: 9999px !important;
-    padding: 14px 32px !important;
+    padding: 12px 36px !important;
     border: none !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
     box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1) !important;
     transition: all 0.3s ease !important;
     cursor: pointer !important;
-    display: block !important;
     margin: 0 auto !important;
-    min-height: auto !important;
-    height: auto !important;
-}
-
-div[data-testid="stFileUploadDropzone"] button:hover {
-    background-color: #f1f5f9 !important;
-    transform: scale(1.02) !important;
-    box-shadow: 0 4px 25px rgba(255, 255, 255, 0.2) !important;
-}
-
-/* Hide all child elements inside the browse button to prevent duplicate text overlaps */
-div[data-testid="stFileUploadDropzone"] button * {
-    display: none !important;
-}
-
-div[data-testid="stFileUploadDropzone"] button::after {
-    content: "Select File" !important;
     display: block !important;
-    font-size: 0.875rem !important;
-    color: #000000 !important;
-    font-weight: 600 !important;
+    min-height: unset !important;
+    height: auto !important;
     line-height: 1.4 !important;
 }
 
-/* Restyle other buttons (Simulation and Download) to be premium dark pills */
-div[data-testid="stButton"] button {
-    background-color: #0c0d12 !important;
-    color: #cbd5e1 !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 9999px !important;
-    padding: 10px 24px !important;
-    font-weight: 500 !important;
-    font-size: 0.9rem !important;
-    transition: all 0.3s ease !important;
-    display: block !important;
-    margin: 0 auto !important;
+section[data-testid="stFileUploadDropzone"] button:hover {
+    background-color: #f1f5f9 !important;
+    transform: scale(1.03) !important;
+    box-shadow: 0 6px 30px rgba(255, 255, 255, 0.15) !important;
 }
 
-div[data-testid="stButton"] button:hover {
-    background-color: #161822 !important;
-    color: #ffffff !important;
-    border-color: rgba(255, 255, 255, 0.25) !important;
-}
-
+/* ── ACTION BUTTONS (Simulation / Download) ── */
+div[data-testid="stButton"] button,
 div[data-testid="stDownloadButton"] button {
-    background-color: #0c0d12 !important;
+    background-color: rgba(12, 13, 18, 0.9) !important;
     color: #cbd5e1 !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 9999px !important;
-    padding: 10px 24px !important;
+    padding: 12px 24px !important;
     font-weight: 500 !important;
     font-size: 0.9rem !important;
     transition: all 0.3s ease !important;
     display: block !important;
     margin: 0 auto !important;
+    backdrop-filter: blur(8px) !important;
 }
 
+div[data-testid="stButton"] button:hover,
 div[data-testid="stDownloadButton"] button:hover {
     background-color: #161822 !important;
     color: #ffffff !important;
     border-color: rgba(255, 255, 255, 0.25) !important;
 }
 
-/* Metric card styling */
+/* ── METRIC CARDS ── */
 div[data-testid="metric-container"] {
     background: rgba(30, 41, 59, 0.3) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
     border-radius: 16px !important;
     padding: 24px 28px !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25) !important;
     backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
     transition: transform 0.3s ease, border-color 0.3s ease !important;
 }
 
@@ -209,7 +208,7 @@ div.stAlert, div.stExpander, div[data-testid="stDataFrame"] {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Text Headers styling */
+/* Text Headers */
 h1 {
     font-weight: 800 !important;
     font-size: 3.5rem !important;
@@ -223,72 +222,49 @@ h2, h3 {
     letter-spacing: -0.02em !important;
 }
 </style>
-<canvas id="living-market-canvas" style="position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.7; background-color: #020202;"></canvas>
-<script>
-(function() {
-    const canvas = document.getElementById('living-market-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let particles = [];
-    let lastTime = performance.now();
-
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        
-        particles = [];
-        const numParticles = window.innerWidth < 768 ? 40 : 120;
-        for (let i = 0; i < numParticles; i++) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                baseY: Math.random() * canvas.height,
-                speed: 0.1 + Math.random() * 0.4,
-                size: Math.random() * 1.5 + 0.5,
-                opacity: Math.random() * 0.4 + 0.1,
-            });
-        }
-    }
-
-    window.addEventListener('resize', resize);
-    resize();
-
-    function draw(time) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Shifting curves (Valuation Bands)
-        for (let i = 0; i < 4; i++) {
-            const bandY = (canvas.height / 5) * (i + 1) + Math.sin(time / 2000 + i) * 20;
-            ctx.beginPath();
-            ctx.moveTo(0, bandY);
-            ctx.bezierCurveTo(canvas.width / 3, bandY + 40, (canvas.width / 3) * 2, bandY - 40, canvas.width, bandY);
-            ctx.strokeStyle = `rgba(34, 211, 238, 0.015)`;
-            ctx.lineWidth = 1;
-            ctx.stroke();
-        }
-
-        particles.forEach(p => {
-            p.x -= p.speed;
-            if (p.x < -10) {
-                p.x = canvas.width + 10;
-                p.baseY = Math.random() * canvas.height;
-            }
-
-            ctx.beginPath();
-            ctx.arc(p.x, p.baseY, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
-            ctx.fill();
-        });
-
-        requestAnimationFrame(draw);
-    }
-
-    requestAnimationFrame(draw);
-})();
-</script>
 """, unsafe_allow_html=True)
+
+
+@st.cache_data(show_spinner=False)
+def _jd_text() -> str:
+    p = ROOT / "data" / "job_description.txt"
+    return p.read_text(encoding="utf-8") if p.exists() else (
+        "Senior AI Engineer — embeddings, retrieval, ranking, evaluation, production ML at a "
+        "product company.")
+
+
+@st.cache_resource(show_spinner="Loading embedding backend (first run only)…")
+def _jd_vec() -> np.ndarray:
+    return encode_query(_jd_text())
+
+
+def _rank(raws: list[dict]) -> list[dict]:
+    """Score, exclude honeypots, sort, and build a conviction card per candidate."""
+    texts = [Candidate(r).all_text for r in raws]
+    sem_raw = cosine_to_jd(encode_texts(texts), _jd_vec())          # ATS-style raw similarity
+    sem = pool_normalize(sem_raw)
+    id_sem = {Candidate(r).id: float(s) for r, s in zip(raws, sem)}
+    # ATS baseline order (pure similarity) -> ats_rank
+    order = sorted(range(len(raws)), key=lambda i: -sem_raw[i])
+    ats_rank = {Candidate(raws[idx]).id: rank for rank, idx in enumerate(order, 1)}
+
+    scored = []
+    for r in raws:
+        c = Candidate(r); s = score_candidate(c, id_sem.get(c.id, 0.0))
+        if s["is_honeypot"]:
+            continue
+        s["rscore"] = round(s["score"], C.SCORE_DECIMALS)
+        scored.append((c, s))
+    scored.sort(key=lambda cs: (-cs[1]["rscore"], cs[0].id))
+
+    cutoff = max(5, len(raws) // 3)        # cohort-relative "ATS missed them" threshold
+    cards = []
+    for i, (c, s) in enumerate(scored, 1):
+        card = presentation.card(c, s, i, ats_rank.get(c.id), ats_cutoff=cutoff)
+        card["reasoning"] = reasoning.make(c, s, i)
+        cards.append(card)
+    return cards
+
 
 # Session State Initialization
 if "processing" not in st.session_state:
@@ -371,10 +347,23 @@ if not st.session_state.processed:
         </p>
     </div>
     """, unsafe_allow_html=True)
+    # Card header for the file uploader
+    st.markdown("""
+    <div style="max-width: 750px; margin: 0 auto; padding: 0;">
+        <div style="background: rgba(10,13,18,0.85); border: 1px solid rgba(255,255,255,0.08);
+                    border-bottom: none; border-radius: 24px 24px 0 0; padding: 36px 40px 20px 40px;
+                    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
+            <div style="font-size: 1.3rem; font-weight: 600; color: #ffffff; font-family: 'Outfit', sans-serif;">
+                Activate Discovery Engine
+            </div>
+            <div style="font-size: 0.9rem; font-weight: 300; color: #64748b; margin-top: 6px; font-family: 'Outfit', sans-serif;">
+                Upload candidates.jsonl (≤100) to reveal hidden density.
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-
-
-    # Render actual streamlit file uploader (pulled up into card via negative CSS margin)
+    # Render actual streamlit file uploader
     up = st.file_uploader("Upload candidates.jsonl (≤100)", type=["jsonl"], label_visibility="collapsed")
     if up is not None:
         st.session_state.raws = [json.loads(l) for l in up.read().decode("utf-8").splitlines() if l.strip()][:100]
@@ -386,14 +375,14 @@ if not st.session_state.processed:
     c1, c2 = st.columns(2)
     with c1:
         if st.button("⚡ Or run market simulation", use_container_width=True):
-            p = C.DATA / "candidates.jsonl"
+            p = ROOT / "data" / "candidates.jsonl"
             if p.exists():
                 st.session_state.raws = [json.loads(l) for l in p.read_text(encoding="utf-8").splitlines() if l.strip()][:100]
                 st.session_state.processing = True
                 st.session_state.step = 0
                 st.rerun()
     with c2:
-        sample_path = C.DATA / "candidates.jsonl"
+        sample_path = ROOT / "data" / "candidates.jsonl"
         sample_data = ""
         if sample_path.exists():
             sample_data = sample_path.read_text(encoding="utf-8")
@@ -495,30 +484,67 @@ hero = max(cards[:20], key=lambda c: (c["tmi"] if c["tmi"] is not None else -1))
 if hero:
     st.markdown("<h2 style='font-family: \"Outfit\"; font-weight: 700; color: #f8fafc; margin-top: 40px; margin-bottom: 20px;'>Why Traditional Hiring Fails — Exhibit A</h2>", unsafe_allow_html=True)
     
-    td_spans = " ".join(f'<span style="background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-right: 8px; margin-bottom: 8px; display: inline-block;">✓ {d}</span>' for d in hero["trust_drivers"])
-    cn_spans = f'<div style="margin-top: 12px;">' + " ".join(f'<span style="background: rgba(239, 68, 68, 0.08); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.15); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-right: 8px; margin-bottom: 8px; display: inline-block;">⚠ {x}</span>' for x in hero["concerns"]) + '</div>' if hero["concerns"] else ''
-    
+    td_lis = "".join(f'<li style="display: flex; gap: 8px; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 8px; align-items: flex-start;"><span style="width: 6px; h-height: 6px; background: #22d3ee; border-radius: 50%; margin-top: 6px; flex-shrink: 0;"></span>{d}</li>' for d in hero["trust_drivers"])
+    cn_lis = "".join(f'<li style="display: flex; gap: 8px; font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px; align-items: flex-start;"><span style="width: 6px; h-height: 6px; background: #fb7185; border-radius: 50%; margin-top: 6px; flex-shrink: 0;"></span>{x}</li>' for x in hero["concerns"])
+    if not cn_lis:
+        cn_lis = '<li style="font-size: 0.85rem; color: #64748b; font-style: italic;">No risks detected</li>'
+
     st.markdown(f"""
-    <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(192, 132, 252, 0.08)); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 30px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);">
-        <div style="display: flex; gap: 30px; margin-bottom: 24px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 140px; background: rgba(30, 41, 59, 0.3); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.04);">
-                <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">ATS Rank</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #f43f5e;">#{hero['ats_rank']}</div>
+    <div style="position: relative; background: #070709; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);">
+        <div style="position: absolute; top: 30px; right: 30px; text-align: right;">
+            <div style="font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Talent Mispricing Index</div>
+            <div style="font-size: 1.8rem; font-weight: 700; color: #22d3ee; margin-top: 2px;">{hero['tmi']:+d}</div>
+        </div>
+        
+        <div style="margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <div style="font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Identified Asset</div>
+                <span style="font-size: 8px; font-weight: 700; color: #22d3ee; background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.2); padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.05em;">{hero['quadrant']}</span>
             </div>
-            <div style="flex: 1; min-width: 140px; background: rgba(30, 41, 59, 0.3); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.04);">
-                <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Engine Rank</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #10b981;">#{hero['our_rank']}</div>
+            <h3 style="font-size: 1.6rem; font-weight: 700; color: #ffffff; margin: 0; font-family: 'Outfit';">Candidate {hero['candidate_id'].split('_')[-1]}</h3>
+            <div style="font-size: 0.95rem; color: #94a3b8; margin-top: 4px;">{hero['title']}</div>
+        </div>
+
+        <div style="display: flex; gap: 30px; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px;">
+            <div>
+                <div style="font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.05em;">Fit</div>
+                <div style="font-size: 1.4rem; font-weight: 600; color: #ffffff;">{hero['fit']}</div>
             </div>
-            <div style="flex: 1; min-width: 140px; background: rgba(30, 41, 59, 0.3); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.04);">
-                <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Mispricing Index (TMI)</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #a78bfa;">{hero['tmi']:+d}</div>
+            <div>
+                <div style="font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.05em;">Conviction</div>
+                <div style="font-size: 1.4rem; font-weight: 600; color: #ffffff;">{hero['conviction']}%</div>
+            </div>
+            <div>
+                <div style="font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.05em;">Evidence</div>
+                <div style="font-size: 1.4rem; font-weight: 600; color: #ffffff;">{hero['evidence_density']}%</div>
             </div>
         </div>
-        <h3 style="margin-bottom: 12px; font-size: 1.3rem; font-weight: 700; color: #f8fafc; font-family: 'Outfit';">{hero['title']}</h3>
-        <div style="margin-bottom: 16px;">
-            {td_spans}
+
+        <div style="display: flex; gap: 40px; margin-bottom: 24px;">
+            <div>
+                <div style="font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.05em;">Prior ATS Value</div>
+                <div style="font-size: 1.8rem; font-weight: 400; color: #64748b; text-decoration: line-through;">#{hero['ats_rank']}</div>
+            </div>
+            <div>
+                <div style="font-size: 9px; text-transform: uppercase; color: #22d3ee; font-weight: 600; letter-spacing: 0.05em;">Discovery Value</div>
+                <div style="font-size: 1.8rem; font-weight: 600; color: #ffffff;">#{hero['our_rank']}</div>
+            </div>
         </div>
-        {cn_spans}
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; min-width: 0;">
+            <div>
+                <div style="font-size: 10px; text-transform: uppercase; color: rgba(34, 211, 238, 0.8); font-weight: 700; margin-bottom: 12px; letter-spacing: 0.05em;">Core Signals</div>
+                <ul style="list-style-type: none; padding-left: 0; margin: 0;">
+                    {td_lis}
+                </ul>
+            </div>
+            <div>
+                <div style="font-size: 10px; text-transform: uppercase; color: rgba(244, 63, 94, 0.8); font-weight: 700; margin-bottom: 12px; letter-spacing: 0.05em;">Risk Vectors</div>
+                <ul style="list-style-type: none; padding-left: 0; margin: 0;">
+                    {cn_lis}
+                </ul>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -526,26 +552,69 @@ if hero:
 if gems:
     st.markdown("<h2 style='font-family: \"Outfit\"; font-weight: 700; color: #f8fafc; margin-top: 40px; margin-bottom: 20px;'>💎 Hidden Gems — Buried by Keyword Search</h2>", unsafe_allow_html=True)
     
-    for g in gems[:3]:
-        td_html = " ".join(f'<span style="background: rgba(16, 185, 129, 0.08); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.15); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-right: 8px; margin-bottom: 8px; display: inline-block;">✓ {d}</span>' for d in g["trust_drivers"])
-        cn_html = f'<div style="margin-top: 10px;">' + " ".join(f'<span style="background: rgba(239, 68, 68, 0.08); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.15); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-right: 8px; margin-bottom: 8px; display: inline-block;">⚠ {x}</span>' for x in g["concerns"]) + '</div>' if g["concerns"] else ''
-        
+    # Render gems in cards
+    for g in gems[:4]:
+        td_lis = "".join(f'<li style="display: flex; gap: 8px; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 8px; align-items: flex-start;"><span style="width: 6px; h-height: 6px; background: #22d3ee; border-radius: 50%; margin-top: 6px; flex-shrink: 0;"></span>{d}</li>' for d in g["trust_drivers"])
+        cn_lis = "".join(f'<li style="display: flex; gap: 8px; font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px; align-items: flex-start;"><span style="width: 6px; h-height: 6px; background: #fb7185; border-radius: 50%; margin-top: 6px; flex-shrink: 0;"></span>{x}</li>' for x in g["concerns"])
+        if not cn_lis:
+            cn_lis = '<li style="font-size: 0.85rem; color: #64748b; font-style: italic;">No risks detected</li>'
+            
         st.markdown(f"""
-        <div style="background: rgba(16, 185, 129, 0.03); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); backdrop-filter: blur(10px);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-                <span style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; font-family: 'Outfit';">#{g['our_rank']} {g['title']}</span>
-                <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; border: 1px solid rgba(16, 185, 129, 0.25);">Hidden Gem</span>
+        <div style="position: relative; background: #070709; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 30px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);">
+            <div style="position: absolute; top: 30px; right: 30px; text-align: right;">
+                <div style="font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Talent Mispricing Index</div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #22d3ee; margin-top: 2px;">{g['tmi']:+d}</div>
             </div>
-            <div style="display: flex; gap: 20px; margin-bottom: 18px; font-size: 0.9rem; color: #94a3b8; flex-wrap: wrap;">
-                <div>⚡ Fit: <strong style="color: #f8fafc;">{g['fit']}%</strong></div>
-                <div>🎯 Conviction: <strong style="color: #f8fafc;">{g['conviction']}%</strong></div>
-                <div>📈 TMI: <strong style="color: #34d399;">{g['tmi']:+d}</strong></div>
-                <div>📋 Evidence Density: <strong style="color: #f8fafc;">{g['evidence_density']}%</strong> ({g['verified_skills']}/{g['claimed_skills']})</div>
+            
+            <div style="margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <div style="font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Identified Asset</div>
+                    <span style="font-size: 8px; font-weight: 700; color: #22d3ee; background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.2); padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.05em;">{g['quadrant']}</span>
+                </div>
+                <h3 style="font-size: 1.6rem; font-weight: 700; color: #ffffff; margin: 0; font-family: 'Outfit';">Candidate {g['candidate_id'].split('_')[-1]}</h3>
+                <div style="font-size: 0.95rem; color: #94a3b8; margin-top: 4px;">{g['title']}</div>
             </div>
-            <div style="margin-bottom: 8px;">
-                {td_html}
+
+            <div style="display: flex; gap: 30px; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px;">
+                <div>
+                    <div style="font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.05em;">Fit</div>
+                    <div style="font-size: 1.4rem; font-weight: 600; color: #ffffff;">{g['fit']}</div>
+                </div>
+                <div>
+                    <div style="font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.05em;">Conviction</div>
+                    <div style="font-size: 1.4rem; font-weight: 600; color: #ffffff;">{g['conviction']}%</div>
+                </div>
+                <div>
+                    <div style="font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.05em;">Evidence</div>
+                    <div style="font-size: 1.4rem; font-weight: 600; color: #ffffff;">{g['evidence_density']}%</div>
+                </div>
             </div>
-            {cn_html}
+
+            <div style="display: flex; gap: 40px; margin-bottom: 24px;">
+                <div>
+                    <div style="font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.05em;">Prior ATS Value</div>
+                    <div style="font-size: 1.8rem; font-weight: 400; color: #64748b; text-decoration: line-through;">#{g['ats_rank']}</div>
+                </div>
+                <div>
+                    <div style="font-size: 9px; text-transform: uppercase; color: #22d3ee; font-weight: 600; letter-spacing: 0.05em;">Discovery Value</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; color: #ffffff;">#{g['our_rank']}</div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; min-width: 0;">
+                <div>
+                    <div style="font-size: 10px; text-transform: uppercase; color: rgba(34, 211, 238, 0.8); font-weight: 700; margin-bottom: 12px; letter-spacing: 0.05em;">Core Signals</div>
+                    <ul style="list-style-type: none; padding-left: 0; margin: 0;">
+                        {td_lis}
+                    </ul>
+                </div>
+                <div>
+                    <div style="font-size: 10px; text-transform: uppercase; color: rgba(244, 63, 94, 0.8); font-weight: 700; margin-bottom: 12px; letter-spacing: 0.05em;">Risk Vectors</div>
+                    <ul style="list-style-type: none; padding-left: 0; margin: 0;">
+                        {cn_lis}
+                    </ul>
+                </div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
